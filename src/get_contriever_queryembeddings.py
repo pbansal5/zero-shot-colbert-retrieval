@@ -14,7 +14,6 @@ import transformers
 import argparse
 import wandb
 from torch import Tensor, nn
-import bert_small as lm
 
 from datasets import load_dataset
 from transformers import DataCollatorForLanguageModeling,AutoTokenizer
