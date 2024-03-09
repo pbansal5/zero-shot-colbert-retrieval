@@ -34,34 +34,41 @@ def MaxSim(query_embed,docs_embed):
     return order, avg_over_querytokens_similarity[order].cpu().tolist()
 
 def zeroshot_rerank(args):
-    output_json = vars(args)
     reranked_to_retrieved_docs = dict({})
 
     with open(args.bm25_file,'r') as f : 
-        query_to_retrieved_docs = json.load(f)['query_to_retrieved_docs']
+        doc_retrieval = json.load(f)
+        query_to_retrieved_docs = doc_retrieval['query_to_retrieved_docs']
         
-    if (args.data_dir != ''):
+    if args.data_dir:
         datasets.config.DOWNLOADED_DATASETS_PATH = Path(args.data_dir)
         datasets.config.HF_DATASETS_CACHE = Path(args.data_dir)
 
-    if (args.rerank_model.split('-')[0] == 'bert'):
-        tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
-    elif (args.rerank_model.split('-')[0] == 'roberta'):
-        tokenizer = AutoTokenizer.from_pretrained('roberta-base')
-    elif (args.rerank_model.split('-')[0] == 'gpt2'):
-        tokenizer = AutoTokenizer.from_pretrained('gpt2')
-        tokenizer.pad_token = tokenizer.eos_token
-    else : 
-        raise Exception("use valid rerank_model")
+    match args.rerank_model.split('-')[0]:
+        case 'bert':
+            tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
+        case 'roberta':
+            tokenizer = AutoTokenizer.from_pretrained('roberta-base')
+        case 'gpt2':
+            tokenizer = AutoTokenizer.from_pretrained('gpt2')
+            tokenizer.pad_token = tokenizer.eos_token
+        case default:
+            raise Exception("Use valid rerank_model")
 
     model = AutoModel.from_pretrained(args.rerank_model).cuda()
     searcher = LuceneSearcher.from_prebuilt_index(args.retrieval_corpus)
 
-    for query,retrieved_docs in tqdm.tqdm(query_to_retrieved_docs.items()):
+    for query_info in tqdm.tqdm(query_to_retrieved_docs):
+        start = query_info['begin_location']
+        end = query_info['end_location']
+        query = query_info['query_seg']
+        retrieved_docs = query_info['retrieved_docs']
 
-        assert len(retrieved_docs) > args.topK
-        retrieved_docs = retrieved_docs[:args.topK]
-        
+        # Need to do some assert to ensure query is the same
+
+        assert len(retrieved_docs) > args.topK, "There are not enough retrieved docs"
+
+        # Reranking with the ColBert objective
         sentences = [query] + [json.loads(searcher.doc(doc['docid']).raw())['contents'] for doc in retrieved_docs]
         tokenized_inputs = tokenizer(sentences,truncation=True,max_length=args.max_length,padding='max_length',return_tensors='pt')
         model_hidden_states = model(tokenized_inputs['input_ids'].cuda(),attention_mask = tokenized_inputs['attention_mask'].cuda(),output_hidden_states=True)['hidden_states']
@@ -70,22 +77,24 @@ def zeroshot_rerank(args):
         reranked_layerwise_docs = dict({})
         for layer,hidden_state in enumerate(model_hidden_states):
             order,scores = MaxSim(hidden_state[0:1],hidden_state[1:])
+            # TODO: Need to add text and title here
             reranked_layerwise_docs['layer%d'%layer] = [dict({'rank':i,'docid':retrieved_docs[order[i]]['docid'],'score':scores[i]}) for i in range(len(retrieved_docs))]
 
-        reranked_to_retrieved_docs[query] = reranked_layerwise_docs
+        query_info['reranked_retrieved_docs'] = reranked_layerwise_docs
 
-    output_json['reranked_to_retrieved_docs'] = reranked_to_retrieved_docs
-    return output_json
+    doc_retrieval['reranking_args'] = var(args)
+
+    return doc_retrieval 
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data_dir', type=str) # '/datastor1/pbansal/huggingface_cache', /home/pb25659/huggingface_cache
-    parser.add_argument('--bm25_file', type=str) # 
-    parser.add_argument('--retrieval_corpus', type=str) # wikipedia-dpr-100w
-    parser.add_argument('--reranked_file', type=str) 
-    parser.add_argument('--rerank_model', type=str) 
-    parser.add_argument('--topK', type=int)
+    parser.add_argument('--data_dir', type=str, default=None) # '/datastor1/pbansal/huggingface_cache', /home/pb25659/huggingface_cache
+    parser.add_argument('--bm25_file', type=str, default=None) # 
+    parser.add_argument('--retrieval_corpus', type=str, default=None) # wikipedia-dpr-100w
+    parser.add_argument('--reranked_file', type=str, default=None) 
+    parser.add_argument('--rerank_model', type=str, default=None) 
+    parser.add_argument('--topK', type=int, default=16)
     parser.add_argument('--max_length', type=int,default=256)
     args = parser.parse_args()
 

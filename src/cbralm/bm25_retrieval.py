@@ -14,25 +14,26 @@ def not_forbidden(context,forbidden_titles):
     return (title not in forbidden_titles)
 
 def get_bm25_documents(args):
-    output_json = vars(args)
-    query_to_retrieved_docs = dict({})
+    output_json = {} 
+    query_to_retrieved_docs = [] 
 
 
-    if (args.forbidden_titles != ''):
+    if args.forbidden_titles:
         with open(args.forbidden_titles, "r") as f:
             forbidden_titles = [line.strip() for line in f]
         forbidden_titles = set(forbidden_titles)
-    else : 
+    else: 
         forbidden_titles = set([])
 
-    if (args.data_dir != ''):
+    if args.data_dir:
         datasets.config.DOWNLOADED_DATASETS_PATH = Path(args.data_dir)
         datasets.config.HF_DATASETS_CACHE = Path(args.data_dir)
 
-    if (args.query_corpus == 'wikitext'):
-        query_corpus = datasets.load_dataset('wikitext','wikitext-103-v1')['test']['text']
-    else : 
-        raise Exception("Unknown Query Corpus")
+    match args.query_corpus:
+        case 'wikitext':
+            query_corpus = datasets.load_dataset('wikitext','wikitext-103-v1')['test']['text']
+        case default:
+            raise Exception("Unknown Query Corpus")
     
     query_corpus = ' '.join(query_corpus).strip()
     searcher = LuceneSearcher.from_prebuilt_index(args.retrieval_corpus)
@@ -45,8 +46,9 @@ def get_bm25_documents(args):
     tokenized_query_corpus = tokenizer(query_corpus,return_tensors='np')['input_ids'][0]
     length_query_corpus = len(tokenized_query_corpus)
 
-    for start_ in tqdm.tqdm(range(0,length_query_corpus,args.retrieval_stride)):
-        tokenized_query_segment = tokenized_query_corpus[start_:start_+args.retrieval_query_length]
+    for start in tqdm.tqdm(range(0,length_query_corpus,args.retrieval_stride)):
+        end = start + args.retrieval_query_length
+        tokenized_query_segment = tokenized_query_corpus[start:end]
         query_segment = tokenizer.decode(tokenized_query_segment)
         hits = searcher.search(query_segment,num_docs_to_retrieve)
         
@@ -55,22 +57,30 @@ def get_bm25_documents(args):
         filtered_hits = [hit for hit in hits if not_forbidden(json.loads(hit.raw)['contents'],forbidden_titles)]
 
         filtered_hits_topk = [dict({'rank':i,'docid':filtered_hits[i].docid,'score':filtered_hits[i].score}) for i in range(args.topK)]
-        query_to_retrieved_docs[query_segment] = filtered_hits_topk
+        query_to_retrieved_docs.append(
+                {
+                    'begin_location': start,
+                    'end_location': end,
+                    'query_seg': query_segment,
+                    'retrieved_docs': filtered_hits_topk
+                }
+        ) 
 
     output_json['query_to_retrieved_docs'] = query_to_retrieved_docs
+    output_json['bm25_logging_info'] = vars(args)
     return output_json
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data_dir', type=str) # '/datastor1/pbansal/huggingface_cache', /home/pb25659/huggingface_cache
-    parser.add_argument('--output_file', type=str) # 
-    parser.add_argument('--retrieval_corpus', type=str) # wikipedia-dpr-100w
-    parser.add_argument('--query_corpus', type=str) # wikipedia-dpr-100w
-    parser.add_argument('--topK', type=int) # 16
-    parser.add_argument('--retrieval_query_length', type=int) # 32
-    parser.add_argument('--retrieval_stride', type=int) # 4
-    parser.add_argument('--tokenizer', type=str) # gpt2
-    parser.add_argument('--forbidden_titles', type=str) # jsons/wikitext_forbidden_titles.txt
+    parser.add_argument('--data_dir', type=str, default=None) # '/datastor1/pbansal/huggingface_cache', /home/pb25659/huggingface_cache
+    parser.add_argument('--output_file', type=str, default=None) # 
+    parser.add_argument('--retrieval_corpus', type=str, default=None) # wikipedia-dpr-100w
+    parser.add_argument('--query_corpus', type=str, default=None) # wikipedia-dpr-100w
+    parser.add_argument('--topK', type=int, default=16) # 16
+    parser.add_argument('--retrieval_query_length', type=int, default=32) # 32
+    parser.add_argument('--retrieval_stride', type=int, default=4) # 4
+    parser.add_argument('--tokenizer', type=str, default=None) # gpt2
+    parser.add_argument('--forbidden_titles', type=str, default=None) # jsons/wikitext_forbidden_titles.txt
     args = parser.parse_args()
 
     output_json = get_bm25_documents(args)

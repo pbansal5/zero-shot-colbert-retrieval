@@ -10,8 +10,8 @@ from torch.nn import CrossEntropyLoss
 from tqdm import tqdm
 from datasets import load_dataset
 
-from ralm.file_utils import print_args
-from ralm.model_utils import load_model_and_tokenizer
+from cbralm.model_utils import load_model_and_tokenizer
+from cbralm.file_utils import print_args
 
 
 def evaluate_logprob_with_retrieved_docs(
@@ -26,18 +26,29 @@ def evaluate_logprob_with_retrieved_docs(
         ranking_strategy,
         num_tokens_to_rank,
         retrieval_max_length,
-        num_docs=-1
+        num_docs=-1,
+        *args
 ):
     input_ids = encodings.input_ids[:, begin_loc:end_loc].to(device)
 
-    if ranking_strategy == "first":
-        assert num_docs in [-1, 1], f"In 'first' ranking strategy, unexpected number of docs to rank: {num_docs}"
-        num_docs = 1
-        chosen_doc_id = 0
-    elif ranking_strategy == "random":
-        chosen_doc_id = np.random.randint(num_docs)
-        retrieved_item["retrieved_docs"] = [retrieved_item["retrieved_docs"][chosen_doc_id]]
-        num_docs = 1
+    match ranking_strategy:
+        case 'first':
+            assert num_docs in [-1, 1], f"In 'first' ranking strategy, unexpected number of docs to rank: {num_docs}"
+            num_docs = 1
+            chosen_doc_id = 0
+        case 'random':
+            chosen_doc_id = np.random.randint(num_docs)
+            retrieved_item["retrieved_docs"] = [retrieved_item["retrieved_docs"][chosen_doc_id]]
+            num_docs = 1
+        case 'colbert':
+            best_doc = None
+            for doc_info in retrieved_item["reranked_retrieved_docs"][f'layer{args.layer}']:
+                if best_doc is None or doc_info['rank'] > best_doc['rank']:
+                    best_doc = doc_info
+            chosen_doc_id = best_doc['docid']
+            num_docs = 1
+            retrieved_item["retrieved_docs"] = [best_doc]
+
 
     num_docs_in_retrieved = len(retrieved_item["retrieved_docs"])
     num_docs = min(num_docs, num_docs_in_retrieved) if num_docs > 0 else num_docs_in_retrieved
@@ -64,7 +75,7 @@ def evaluate_logprob_with_retrieved_docs(
         lm_logits = model(input_ids).logits
 
         # Rank:
-        if ranking_strategy in ["first", "random"]:
+        if ranking_strategy in ["first", "random", "colbert"]:
             batch_doc_id = 0
         else:
             if ranking_strategy == "oracle":
@@ -103,7 +114,7 @@ def eval_dataset(
         output_dir=None,
         stride=4,
         normalization_level="word",
-        retrieval_dataset=None,
+        retrieval_info=None,
         retrieval_max_length=256,
         ranking_strategy="first",
         num_docs_to_rank=1,
@@ -124,6 +135,11 @@ def eval_dataset(
         raise ValueError(f"Unknown normalization_level: '{normalization_level}'")
 
     print("Normalization factor (num tokens/words..):", counter)
+
+
+    # Get the retrieved dataset
+    if retrieved_info:
+        retrieval_dataset = retrieved_info['query_to_retrieved_docs']
 
     nlls = []
     prev_end_loc = 0
@@ -230,7 +246,7 @@ def main(args):
     retrieval_dataset = None
     if args.retrieved_file is not None:
         with open(args.retrieved_file, "r") as f:
-            retrieval_dataset = json.load(f)
+            retrieval_info = json.load(f)
 
     eval_dataset(
         model,
@@ -241,7 +257,7 @@ def main(args):
         output_dir=args.output_dir,
         stride=args.stride,
         normalization_level=args.normalization_level,
-        retrieval_dataset=retrieval_dataset,
+        retrieval_info=retrieval_info,
         retrieval_max_length=args.retrieved_max_length,
         ranking_strategy=args.ranking_strategy,
         num_docs_to_rank=args.num_docs_to_rank,
