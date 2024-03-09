@@ -58,6 +58,9 @@ def zeroshot_rerank(args):
     searcher = LuceneSearcher.from_prebuilt_index(args.retrieval_corpus)
 
     for query,retrieved_docs in tqdm.tqdm(query_to_retrieved_docs.items()):
+
+        assert len(retrieved_docs) > args.topK
+        retrieved_docs = retrieved_docs[:args.topK]
         
         sentences = [query] + [json.loads(searcher.doc(doc['docid']).raw())['contents'] for doc in retrieved_docs]
         tokenized_inputs = tokenizer(sentences,truncation=True,max_length=args.max_length,padding='max_length',return_tensors='pt')
@@ -82,6 +85,7 @@ if __name__ == "__main__":
     parser.add_argument('--retrieval_corpus', type=str) # wikipedia-dpr-100w
     parser.add_argument('--reranked_file', type=str) 
     parser.add_argument('--rerank_model', type=str) 
+    parser.add_argument('--topK', type=int)
     parser.add_argument('--max_length', type=int,default=256)
     args = parser.parse_args()
 
