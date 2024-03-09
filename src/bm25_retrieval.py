@@ -32,8 +32,7 @@ def get_bm25_documents(args):
     if (args.query_corpus == 'wikitext'):
         query_corpus = datasets.load_dataset('wikitext','wikitext-103-v1')['test']['text']
     else : 
-        print ("Unknown Query Corpus")
-        exit()
+        raise Exception("Unknown Query Corpus")
     
     query_corpus = ' '.join(query_corpus).strip()
     searcher = LuceneSearcher.from_prebuilt_index(args.retrieval_corpus)

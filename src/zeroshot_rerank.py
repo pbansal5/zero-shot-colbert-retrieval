@@ -52,7 +52,7 @@ def zeroshot_rerank(args):
         tokenizer = AutoTokenizer.from_pretrained('gpt2')
         tokenizer.pad_token = tokenizer.eos_token
     else : 
-        Exception("use valid rerank_model")
+        raise Exception("use valid rerank_model")
 
     model = AutoModel.from_pretrained(args.rerank_model).cuda()
     searcher = LuceneSearcher.from_prebuilt_index(args.retrieval_corpus)
