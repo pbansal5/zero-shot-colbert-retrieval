@@ -35,7 +35,7 @@ def get_bm25_documents(args):
         print ("Unknown Query Corpus")
         exit()
     
-    query_corpus = ' '.join(query_corpus).strip()[-1000:]
+    query_corpus = ' '.join(query_corpus).strip()
     searcher = LuceneSearcher.from_prebuilt_index(args.retrieval_corpus)
 
     ## We tokenize the query corpus and untokenize it since the stride is in terms of number of tokens instead of number of words
