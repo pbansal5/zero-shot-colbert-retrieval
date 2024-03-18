@@ -56,7 +56,7 @@ def get_bm25_documents(args):
         # This follows in-context RALM paper. 
         filtered_hits = [hit for hit in hits if not_forbidden(json.loads(hit.raw)['contents'],forbidden_titles)]
 
-        filtered_hits_topk = [dict({'rank':i,'docid':filtered_hits[i].docid,'score':filtered_hits[i].score}) for i in range(args.topK)]
+        filtered_hits_topk = [dict({'rank':i,'docid':filtered_hits[i].docid,'score':filtered_hits[i].score, 'text': filtered_hits[i].contents}) for i in range(args.topK)]
         query_to_retrieved_docs.append(
                 {
                     'begin_location': start,

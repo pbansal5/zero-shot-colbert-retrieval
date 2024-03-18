@@ -11,7 +11,7 @@ from tqdm import tqdm
 from datasets import load_dataset
 
 from cbralm.model_utils import load_model_and_tokenizer
-from cbralm.file_utils import print_args
+from .file_utils import print_args
 
 
 def evaluate_logprob_with_retrieved_docs(
@@ -221,9 +221,6 @@ def eval_dataset(
 
 
 def main(args):
-    if args.output_dir is not None:
-        os.makedirs(args.output_dir)
-    print_args(args, output_dir=args.output_dir)
 
     model, tokenizer, config, device = load_model_and_tokenizer(
         args.model_name, model_parallelism=args.model_parallelism, cache_dir=args.cache_dir, auth_token=args.auth_token
@@ -244,9 +241,15 @@ def main(args):
 
     transformers.logging.set_verbosity_error()
     retrieval_dataset = None
+    retrieval_info = None
     if args.retrieved_file is not None:
         with open(args.retrieved_file, "r") as f:
             retrieval_info = json.load(f)
+
+    if args.output_dir is not None:
+        os.makedirs(args.output_dir)
+    print_args(args, output_dir=args.output_dir, retrieval_info=retrieval_info)
+
 
     eval_dataset(
         model,
