@@ -6,11 +6,11 @@
 
 
 ## TODO Refactoring
-- [ ] Add text and title embeddings in zeroshot_rerank.py (This will make it easier to plug and play on benchmark)
+- [x] Add text and title embeddings in zeroshot_rerank.py (This will make it easier to plug and play on benchmark)
 - [ ] Need to test project setup.py
 - [ ] Need to refactor model and tokenizer (Allows us to keep it consistent across files)
 - [ ] Attempt running and debugging
-- [ ] create logging, so that parameters can be saved to file when running the benchmark (create file_utils.py or just create object in benchmarking)
+- [x] create logging, so that parameters can be saved to file when running the benchmark (create file_utils.py or just create object in benchmarking)
 
 
 ## Additional Notes
