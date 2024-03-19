@@ -29,11 +29,16 @@ def get_bm25_documents(args):
         datasets.config.DOWNLOADED_DATASETS_PATH = Path(args.data_dir)
         datasets.config.HF_DATASETS_CACHE = Path(args.data_dir)
 
-    match args.query_corpus:
-        case 'wikitext':
-            query_corpus = datasets.load_dataset('wikitext','wikitext-103-v1')['test']['text']
-        case default:
-            raise Exception("Unknown Query Corpus")
+    # match args.query_corpus:
+    #     case 'wikitext':
+    #         query_corpus = datasets.load_dataset('wikitext','wikitext-103-v1')['test']['text']
+    #     case default:
+    #         raise Exception("Unknown Query Corpus")
+    
+    if args.query_corpus == 'wikitext':
+        query_corpus = datasets.load_dataset('wikitext','wikitext-103-v1')['test']['text']
+    else : 
+        raise Exception("Unknown Query Corpus")
     
     query_corpus = ' '.join(query_corpus).strip()
     searcher = LuceneSearcher.from_prebuilt_index(args.retrieval_corpus)

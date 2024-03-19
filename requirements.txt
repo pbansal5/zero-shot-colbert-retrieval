@@ -1,5 +1,4 @@
-python==3.8.0
-torch==1.12.1
+torch
 numpy
 datasets
 pyserini==0.22.1
