@@ -1,7 +1,8 @@
+python==3.8.0
 torch==1.12.1
 numpy
 datasets
-pyserini
+pyserini==0.22.1
 faiss-cpu
 transformers==4.28.1
 tokenizers==0.13.3
