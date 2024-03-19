@@ -1,0 +1,54 @@
+Metadata-Version: 2.1
+Name: cb-ralm
+Version: 0.0.1
+Summary: ColbertRALM
+Home-page: https://github.com/pbansal5/zero-shot-colbert-retrieval
+Author: 
+Author-email: 
+Keywords: ColBert pretrained
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Education
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: Apache Software License
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Topic :: Scientific/Engineering
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Classifier: Topic :: Software Development
+Classifier: Topic :: Software Development :: Libraries
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+Requires-Dist: torch==1.12.1
+Requires-Dist: numpy
+Requires-Dist: datasets
+Requires-Dist: pyserini
+Requires-Dist: faiss-cpu
+Requires-Dist: transformers==4.28.1
+Requires-Dist: tokenizers==0.13.3
+Requires-Dist: accelerate
+
+## TODO 
+- [ ] Run BM25 script on Wikitext-103
+- [ ] Run Re-rankers (BERT-base and GPT2-small) on top 16 
+- [ ] Add perplexity benchmarking code mimicking https://github.com/AI21Labs/in-context-ralm/tree/main
+- [ ] Run Re-rankers (BERT-base and GPT2-small) on top 100
+
+
+## TODO Refactoring
+- [x] Add text and title embeddings in zeroshot_rerank.py (This will make it easier to plug and play on benchmark)
+- [ ] Need to test project setup.py
+- [ ] Need to refactor model and tokenizer (Allows us to keep it consistent across files)
+- [ ] Attempt running and debugging
+- [x] create logging, so that parameters can be saved to file when running the benchmark (create file_utils.py or just create object in benchmarking)
+
+
+## Additional Notes
+
+Do we need to run BM25 on a large retrieval (i.e. top 1000?) so that we thin down the corpus, but don't attribute the benefit to retrieval of bm25
+
+Alternatively, we can just use bm25 retrieval with colbert reranking?
+
+This is something we need to talk about, otherwise it would be hard to attribute where we are getting the benefits from.

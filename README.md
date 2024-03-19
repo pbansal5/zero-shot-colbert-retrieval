@@ -7,16 +7,23 @@
 
 ## TODO Refactoring
 - [x] Add text and title embeddings in zeroshot_rerank.py (This will make it easier to plug and play on benchmark)
-- [ ] Need to test project setup.py
-- [ ] Need to refactor model and tokenizer (Allows us to keep it consistent across files)
+- [x] Need to test project setup.py
+- [ ] Need to refactor model and tokenizer (Allows us to keep it consistent across files) # Not as important
 - [ ] Attempt running and debugging
 - [x] create logging, so that parameters can be saved to file when running the benchmark (create file_utils.py or just create object in benchmarking)
 
+## Setup
 
-## Additional Notes
+In order to setup run the following commands. Clone the repo and then run.
 
-Do we need to run BM25 on a large retrieval (i.e. top 1000?) so that we thin down the corpus, but don't attribute the benefit to retrieval of bm25
+```bash
+pip install -e .
+```
 
-Alternatively, we can just use bm25 retrieval with colbert reranking?
+Then ensure that JDK=11 is installed. We can do that with conda, through the following command.
 
-This is something we need to talk about, otherwise it would be hard to attribute where we are getting the benefits from.
+
+```bash
+conda install openjdk=11
+```
+
