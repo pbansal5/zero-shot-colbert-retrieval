@@ -14,7 +14,7 @@
 
 ## Setup
 
-In order to setup run the following commands. Clone the repo and then run.
+In order to setup run the following commands. Clone the repo and then run the following after installing python=3.8:
 
 ```bash
 pip install -e .
