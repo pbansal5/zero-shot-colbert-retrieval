@@ -49,6 +49,7 @@ def MaxSim(query_embed, docs_embed):
     return order, avg_over_querytokens_similarity[order].cpu().tolist()
 
 
+@torch.no_grad()
 def zeroshot_rerank(args):
     reranked_to_retrieved_docs = dict({})
 
@@ -115,6 +116,7 @@ def zeroshot_rerank(args):
                         "rank": i,
                         "docid": retrieved_docs[order[i]]["docid"],
                         "score": scores[i],
+                        "text": retrieved_docs[order[i]]["text"]
                     }
                 )
                 for i in range(len(retrieved_docs))
@@ -122,7 +124,7 @@ def zeroshot_rerank(args):
 
         query_info["reranked_retrieved_docs"] = reranked_layerwise_docs
 
-    doc_retrieval["reranking_args"] = var(args)
+    doc_retrieval["reranking_args"] = vars(args)
 
     return doc_retrieval
 

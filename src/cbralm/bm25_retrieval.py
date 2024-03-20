@@ -15,6 +15,8 @@ def not_forbidden(context, forbidden_titles):
     return title not in forbidden_titles
 
 
+
+
 def get_bm25_documents(args):
     output_json = {}
     query_to_retrieved_docs = []
@@ -80,7 +82,7 @@ def get_bm25_documents(args):
                     "rank": i,
                     "docid": filtered_hits[i].docid,
                     "score": filtered_hits[i].score,
-                    "text": filtered_hits[i].contents,
+                    "text": json.loads(filtered_hits[i].raw)["contents"],
                 }
             )
             for i in range(args.topK)

@@ -1,0 +1,19 @@
+ **************** Benchmark Params **************** 
+auth_token                       None
+cache_dir                        None
+dataset_name                     wikitext-103-v1
+dataset_path                     wikitext
+dataset_split                    validation
+load_from                        hf
+max_length                       32
+model_layer                      None
+model_name                       gpt2
+model_parallelism                False
+normalization_level              word
+num_docs_to_rank                 -1
+output_dir                       logs/baseline
+ranking_logprob_past_tokens      16
+ranking_strategy                 first
+retrieved_file                   None
+retrieved_max_length             256
+stride                           4

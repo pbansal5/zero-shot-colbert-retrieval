@@ -6,6 +6,7 @@ import pickle
 import numpy as np
 import torch
 import transformers
+import torch
 from torch.nn import CrossEntropyLoss
 from tqdm import tqdm
 from datasets import load_dataset
@@ -27,27 +28,30 @@ def evaluate_logprob_with_retrieved_docs(
         num_tokens_to_rank,
         retrieval_max_length,
         num_docs=-1,
+        model_layer=None,
         *args
 ):
     input_ids = encodings.input_ids[:, begin_loc:end_loc].to(device)
 
-    match ranking_strategy:
-        case 'first':
-            assert num_docs in [-1, 1], f"In 'first' ranking strategy, unexpected number of docs to rank: {num_docs}"
-            num_docs = 1
-            chosen_doc_id = 0
-        case 'random':
-            chosen_doc_id = np.random.randint(num_docs)
-            retrieved_item["retrieved_docs"] = [retrieved_item["retrieved_docs"][chosen_doc_id]]
-            num_docs = 1
-        case 'colbert':
-            best_doc = None
-            for doc_info in retrieved_item["reranked_retrieved_docs"][f'layer{args.layer}']:
-                if best_doc is None or doc_info['rank'] > best_doc['rank']:
-                    best_doc = doc_info
-            chosen_doc_id = best_doc['docid']
-            num_docs = 1
-            retrieved_item["retrieved_docs"] = [best_doc]
+    if ranking_strategy == 'first':
+        assert num_docs in [-1, 1], f"In 'first' ranking strategy, unexpected number of docs to rank: {num_docs}"
+        num_docs = 1
+        chosen_doc_id = 0
+    elif ranking_strategy == 'random':
+        chosen_doc_id = np.random.randint(num_docs)
+        retrieved_item["retrieved_docs"] = [retrieved_item["retrieved_docs"][chosen_doc_id]]
+        num_docs = 1
+    elif ranking_strategy == 'colbert':
+        assert model_layer is not None, "ColBert was selected, but now model layer was specified"
+        best_doc = None
+        for doc_info in retrieved_item["reranked_retrieved_docs"][f'layer{model_layer}']:
+            if best_doc is None or doc_info['rank'] > best_doc['rank']:
+                best_doc = doc_info
+        chosen_doc_id = best_doc['docid']
+        num_docs = 1
+        retrieved_item["retrieved_docs"] = [best_doc]
+    else:
+        raise NotImplementedError('Unknown Reranking Strategy')
 
 
     num_docs_in_retrieved = len(retrieved_item["retrieved_docs"])
@@ -58,6 +62,7 @@ def evaluate_logprob_with_retrieved_docs(
     labels_for_ranking = input_ids.clone()
     assert input_ids.size() == (num_docs, end_loc-begin_loc)
 
+
     for doc_id in range(num_docs):
         retrieved_example = retrieved_item["retrieved_docs"][doc_id]
 
@@ -67,7 +72,10 @@ def evaluate_logprob_with_retrieved_docs(
             doc_text = doc_title + "\n" + doc_text
         encoded_retrieved_text = tokenizer.encode(doc_text, max_length=retrieval_max_length, truncation=True)
 
+        # Changing this
         input_ids[doc_id, :len(encoded_retrieved_text)] = torch.tensor(encoded_retrieved_text, device=device)
+        # to this
+        #input_ids[doc_id].concat(torch.tensor(encoded_retrieved_text, device=device))
 
     loss_fct = CrossEntropyLoss(reduction="none")
 
@@ -96,7 +104,7 @@ def evaluate_logprob_with_retrieved_docs(
 
         # Calculate logprob of the chosen doc:
         lm_logits = lm_logits[batch_doc_id, -trg_len-1:-1, :]
-        labels = target_ids[batch_doc_id, -trg_len:]
+        labels = target_ids[batch_doc_id, -trg_len:] # Changed this
         loss = loss_fct(lm_logits, labels)
         token_ppls = loss.cpu()
         tokens_to_predict = labels.view(-1).cpu().tolist()
@@ -118,7 +126,8 @@ def eval_dataset(
         retrieval_max_length=256,
         ranking_strategy="first",
         num_docs_to_rank=1,
-        num_tokens_to_rank_logprob=16
+        num_tokens_to_rank_logprob=16,
+        model_layer=None # Used for ColBERT
 ):
     encodings = tokenizer(dataset, add_special_tokens=False, return_tensors="pt")
 
@@ -138,8 +147,9 @@ def eval_dataset(
 
 
     # Get the retrieved dataset
-    if retrieved_info:
-        retrieval_dataset = retrieved_info['query_to_retrieved_docs']
+    retrieval_dataset = None
+    if retrieval_info:
+        retrieval_dataset = retrieval_info['query_to_retrieved_docs']
 
     nlls = []
     prev_end_loc = 0
@@ -149,20 +159,22 @@ def eval_dataset(
     all_tokens_to_predict = []
     all_chosen_doc_ids = [None]
     num_inputs_no_retrieval = 0
-    for begin_loc in tqdm(range(0, dataset_len, stride)):
+    for begin_loc in tqdm(range(0, dataset_len, stride)[:500]): # Change this before benchmarking
         end_loc = min(begin_loc + max_length, dataset_len)
         trg_len = end_loc - prev_end_loc  # may be different from stride on last loop
         if idx > 0 and retrieval_dataset is not None and len(retrieval_dataset[idx]["retrieved_docs"]) > 0:
             retrieved_example = retrieval_dataset[idx]
-            assert retrieved_example["begin_location"] == prev_end_loc
-            assert retrieved_example["end_location"] == end_loc
+            assert retrieved_example["begin_location"] == begin_loc, f"{retrieved_example['begin_location']} is different from {prev_end_loc}"
+            assert retrieved_example["end_location"] == end_loc, f"{retrieved_example['end_location']} is different from {end_loc}"
+            #print(retrieved_example["begin_location"], retrieved_example["end_location"], begin_loc, end_loc, prev_end_loc)
 
             neg_log_likelihood, chosen_doc_id, token_ppls, tokens_to_predict = evaluate_logprob_with_retrieved_docs(
                 model, tokenizer, device, encodings, begin_loc, end_loc, trg_len, retrieved_example,
                 ranking_strategy=ranking_strategy,
                 num_tokens_to_rank=num_tokens_to_rank_logprob,
                 retrieval_max_length=retrieval_max_length,
-                num_docs=num_docs_to_rank
+                num_docs=num_docs_to_rank,
+                model_layer=model_layer
             )
             all_chosen_doc_ids.append(chosen_doc_id)
         else:
@@ -195,7 +207,7 @@ def eval_dataset(
         all_tokens_to_predict.append(tokens_to_predict)
         assert len(all_token_ppls) == len(all_tokens_to_predict)
 
-        prev_end_loc = end_loc
+        prev_end_loc = end_loc 
         idx += 1
         if end_loc == dataset_len:
             break
@@ -265,6 +277,7 @@ def main(args):
         ranking_strategy=args.ranking_strategy,
         num_docs_to_rank=args.num_docs_to_rank,
         num_tokens_to_rank_logprob=args.ranking_logprob_past_tokens,
+        model_layer=args.model_layer
     )
 
 
@@ -291,9 +304,12 @@ if __name__ == '__main__':
     # retrieval params
     parser.add_argument("--retrieved_file", type=str, default=None)
     parser.add_argument("--retrieved_max_length", type=int, default=256)
-    parser.add_argument("--ranking_strategy", type=str, choices=["first", "logprob", "oracle", "random"], default="first")
+    parser.add_argument("--ranking_strategy", type=str, choices=["first", "logprob", "oracle", "random", "colbert"], default="first")
     parser.add_argument("--num_docs_to_rank", type=int, default=-1)
     parser.add_argument("--ranking_logprob_past_tokens", type=int, default=16)
+
+    # ColBERT params
+    parser.add_argument("--model_layer", type=int, default=None, help='Which layer to use from the reranker')
 
     args = parser.parse_args()
 

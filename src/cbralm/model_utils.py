@@ -1,3 +1,4 @@
+import torch
 from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer, LlamaTokenizer
 from huggingface_hub import login
 

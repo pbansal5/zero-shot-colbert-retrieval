@@ -1,0 +1,40 @@
+ **************** Benchmark Params **************** auth_token                       None
+cache_dir                        None
+dataset_name                     wikitext-103-v1
+dataset_path                     wikitext
+dataset_split                    validation
+load_from                        hf
+max_length                       32
+model_layer                      12
+model_name                       gpt2
+model_parallelism                False
+normalization_level              word
+num_docs_to_rank                 16
+output_dir                       logs/results-gp2-bert-base
+ranking_logprob_past_tokens      16
+ranking_strategy                 colbert
+retrieved_file                   jsons/bert_reranked_wikitext_rql_32_rs_4_topK_16.json
+retrieved_max_length             32
+stride                           4
+
+
+
+ **************** BM25 Logging INFO **************** data_dir                         
+forbidden_titles                 jsons/wikitext_forbidden_titles.txt
+output_file                      jsons/wikitext_rql_32_rs_4_topK_100.json
+query_corpus                     wikitext
+retrieval_corpus                 wikipedia-dpr-100w
+retrieval_query_length           32
+retrieval_stride                 4
+tokenizer                        gpt2
+topK                             100
+
+
+
+ **************** Reranking Logging INFO **************** bm25_file                        jsons/wikitext_rql_32_rs_4_topK_100.json
+data_dir                         
+max_length                       256
+rerank_model                     bert-base-uncased
+reranked_file                    jsons/bert_reranked_wikitext_rql_32_rs_4_topK_16.json
+retrieval_corpus                 wikipedia-dpr-100w
+topK                             16
