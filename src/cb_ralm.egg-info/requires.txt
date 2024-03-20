@@ -1,0 +1,8 @@
+torch
+numpy
+datasets
+pyserini==0.22.1
+faiss-cpu
+transformers==4.28.1
+tokenizers==0.13.3
+accelerate

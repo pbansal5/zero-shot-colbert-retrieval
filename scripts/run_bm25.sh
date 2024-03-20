@@ -1,4 +1,4 @@
-python3 src/bm25_retrieval.py \
+python3 -m cbralm.bm25_retrieval \
     --data_dir '' \
     --output_file 'jsons/wikitext_rql_32_rs_4_topK_100.json' \
     --retrieval_corpus 'wikipedia-dpr-100w' \

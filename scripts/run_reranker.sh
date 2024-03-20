@@ -1,4 +1,4 @@
-python3 src/zeroshot_rerank.py \
+python3 -m cbralm.zeroshot_rerank \
     --data_dir '' \
     --bm25_file 'jsons/wikitext_rql_32_rs_4_topK_100.json' \
     --retrieval_corpus 'wikipedia-dpr-100w' \
