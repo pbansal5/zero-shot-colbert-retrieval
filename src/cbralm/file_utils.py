@@ -23,7 +23,7 @@ def print_args(args, output_dir=None, output_file=None, retrieval_info=None):
     if output_dir is not None or output_file is not None:
         output_file = output_file or os.path.join(output_dir, "args.txt")
         with open(output_file, "w") as f:
-            f.write(" **************** Benchmark Params **************** ")
+            f.write(" **************** Benchmark Params **************** \n")
             for key, val in sorted(vars(args).items()):
                 keystr = "{}".format(key) + (" " * (30 - len(key)))
                 f.write(f"{keystr}   {val}\n")
@@ -31,13 +31,13 @@ def print_args(args, output_dir=None, output_file=None, retrieval_info=None):
                 bm25_logging_info = retrieval_info["bm25_logging_info"]
                 reranking_args = retrieval_info["reranking_args"]
                 f.write("\n\n\n")
-                f.write(" **************** BM25 Logging INFO **************** ")
+                f.write(" **************** BM25 Logging INFO **************** \n")
                 for key, val in sorted(bm25_logging_info.items()):
                     keystr = "{}".format(key) + (" " * (30 - len(key)))
                     f.write(f"{keystr}   {val}\n")
 
                 f.write("\n\n\n")
-                f.write(" **************** Reranking Logging INFO **************** ")
+                f.write(" **************** Reranking Logging INFO **************** \n")
                 for key, val in sorted(reranking_args.items()):
                     keystr = "{}".format(key) + (" " * (30 - len(key)))
                     f.write(f"{keystr}   {val}\n")

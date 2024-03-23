@@ -4,7 +4,6 @@ import json
 import pickle
 
 import numpy as np
-import torch
 import transformers
 import torch
 from torch.nn import CrossEntropyLoss
@@ -12,7 +11,8 @@ from tqdm import tqdm
 from datasets import load_dataset
 
 from cbralm.model_utils import load_model_and_tokenizer
-from .file_utils import print_args
+from cbralm.file_utils import print_args
+from cbralm.manage_project import create_project, add_to_project
 
 
 def evaluate_logprob_with_retrieved_docs(
@@ -309,11 +309,20 @@ def main(args):
         with open(args.retrieved_file, "r") as f:
             retrieval_info = json.load(f)
 
-    if not os.path.isdir(args.project_name):
+    if retrieval_info is not None and not os.path.isdir(args.project_name):
         raise FileNotFoundError(f"Project {args.project_name} doesn't exist.")
-    if args.output_dir is not None:
-        os.makedirs(args.output_dir)
-    print_args(args, output_dir=args.output_dir, retrieval_info=retrieval_info)
+
+    save_dir = args.project_name
+    if retrieval_info is None:
+        save_dir = create_project(name=args.project_name)
+
+    benchmark_dir = os.path.join(save_dir, "benchmark")
+    os.makedirs(benchmark_dir, exist_ok=True)
+
+    output_dir = os.path.join(benchmark_dir, args.run_name)
+    os.makedirs(output_dir, exist_ok=True)
+
+    print_args(args, output_dir=output_dir, retrieval_info=retrieval_info)
 
     eval_dataset(
         model,
@@ -321,7 +330,7 @@ def main(args):
         dataset,
         device,
         max_length=max_length,
-        output_dir=args.output_dir,
+        output_dir=output_dir,
         stride=args.stride,
         normalization_level=args.normalization_level,
         retrieval_info=retrieval_info,
@@ -338,39 +347,39 @@ if __name__ == "__main__":
 
     parser.add_argument("--run-name", type=str)
     parser.add_argument("--project-name", type=str)
-    parser.add_argument("--rerank-name", type=str, default=None)
 
     # Model params
-    parser.add_argument("--model_name", type=str, required=True)
-    parser.add_argument("--max_length", type=int, default=None)
+    parser.add_argument("--model-name", type=str, required=True)
+    parser.add_argument("--max-length", type=int, default=None)
     parser.add_argument("--stride", type=int, default=4)
-    parser.add_argument("--cache_dir", type=str, default=None)
-    parser.add_argument("--model_parallelism", action="store_true")
-    parser.add_argument("--auth_token", type=str, default=None)
+    parser.add_argument("--cache-dir", type=str, default=None)
+    parser.add_argument("--model-parallelism", action="store_true")
+    parser.add_argument("--auth-token", type=str, default=None)
 
     # Dataset params
-    parser.add_argument("--load_from", type=str, choices=["hf", "file"], default="hf")
-    parser.add_argument("--dataset_path", type=str, required=True)
-    parser.add_argument("--dataset_name", type=str, default=None)
-    parser.add_argument("--dataset_split", type=str, default="test")
+    parser.add_argument("--load-from", type=str, choices=["hf", "file"], default="hf")
+    parser.add_argument("--dataset-path", type=str, required=True)
+    parser.add_argument("--dataset-name", type=str, default=None)
+    parser.add_argument("--dataset-split", type=str, default="test")
     parser.add_argument(
         "--normalization_level", choices=["word", "token"], default="word"
     )
 
     # retrieval params
-    parser.add_argument("--retrieved_max_length", type=int, default=256)
+    parser.add_argument("--retreived-file", type=str, default=None)
+    parser.add_argument("--retrieved-max-length", type=int, default=256)
     parser.add_argument(
-        "--ranking_strategy",
+        "--ranking-strategy",
         type=str,
         choices=["first", "logprob", "oracle", "random", "colbert"],
         default="first",
     )
-    parser.add_argument("--num_docs_to_rank", type=int, default=-1)
-    parser.add_argument("--ranking_logprob_past_tokens", type=int, default=16)
+    parser.add_argument("--num-docs-to-rank", type=int, default=-1)
+    parser.add_argument("--ranking-logprob-past-tokens", type=int, default=16)
 
     # ColBERT params
     parser.add_argument(
-        "--model_layer",
+        "--model-layer",
         type=int,
         default=None,
         help="Which layer to use from the reranker",

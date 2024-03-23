@@ -130,17 +130,17 @@ def zeroshot_rerank(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--data_dir", type=str, default=None
+        "--data-dir", type=str, default=None
     )  # '/datastor1/pbansal/huggingface_cache', /home/pb25659/huggingface_cache
     parser.add_argument(
-        "--retrieval_corpus", type=str, default=None
+        "--retrieval-corpus", type=str, default=None
     )  # wikipedia-dpr-100w
 
     parser.add_argument("--project-name", type=str, default=None)
     parser.add_argument("--run-name", type=str, default=None)
     parser.add_argument("--rerank_model", type=str, default=None)
     parser.add_argument("--topK", type=int, default=16)
-    parser.add_argument("--max_length", type=int, default=256)
+    parser.add_argument("--max-length", type=int, default=256)
     args = parser.parse_args()
 
     # Create project submodule
