@@ -75,13 +75,12 @@ def zeroshot_rerank(args):
     else:
         raise Exception("Use valid rerank_model")
 
-    model = AutoModel.from_pretrained(args.rerank_model).cuda()
+    model = AutoModel.from_pretrained(args.rerank_model).cuda().eval()
     searcher = LuceneSearcher.from_prebuilt_index(args.retrieval_corpus)
 
     logging.info("ReRanking Queries")
 
-    num_text_samples_in_query = len(query_to_retrieved_docs[0]['query']['retrieved_docs']) + 1
-    num_queries_in_batch = int(args.batch_size/num_text_samples_in_query)
+    num_queries_in_batch = int(args.batch_size)
     
     for query_index in tqdm.tqdm(range(0,len(query_to_retrieved_docs),num_queries_in_batch)):
         query_info = [query_to_retrieved_docs[i] for i in range(query_index,query_index+num_queries_in_batch)]
@@ -90,14 +89,14 @@ def zeroshot_rerank(args):
 
         # Reranking with the ColBert objective
 
-        sentences = []
+
+        sentences,query_starts = [],[0]
         for query_,retrieved_docs_ in zip(query,retrieved_docs):
             sentences = sentences + [query_] + [
                 json.loads(searcher.doc(doc["docid"]).raw())["contents"]
                 for doc in retrieved_docs_
             ]
-
-        assert len(sentences) == num_queries_in_batch*num_text_samples_in_query
+            query_starts.append(len(sentences))
 
         tokenized_inputs = tokenizer(
             sentences,
@@ -106,21 +105,23 @@ def zeroshot_rerank(args):
             padding="max_length",
             return_tensors="pt",
         )
-        model_hidden_states = model(
-            tokenized_inputs["input_ids"].cuda(),
-            attention_mask=tokenized_inputs["attention_mask"].cuda(),
-            output_hidden_states=True,
-        )["hidden_states"]
 
-        model_hidden_states = [
-            hidden_state * tokenized_inputs["attention_mask"][:, :, None].cuda()
-            for hidden_state in model_hidden_states
-        ]
+        with torch.no_grad():
+
+            model_hidden_states = model(
+                tokenized_inputs["input_ids"].cuda(),
+                attention_mask=tokenized_inputs["attention_mask"].cuda(),
+                output_hidden_states=True,
+            )["hidden_states"]
+
+            model_hidden_states = [
+                hidden_state * tokenized_inputs["attention_mask"][:, :, None].cuda()
+                for hidden_state in model_hidden_states
+            ]
 
 
-        for query_index_in_batch in range(num_queries_in_batch):
-            model_hidden_states_ = model_hidden_states[query_index_in_batch*num_text_samples_in_query:
-                                                       (query_index_in_batch+1)*num_text_samples_in_query]
+        for index_,retrieved_docs_ in enumerate(retrieved_docs):
+            model_hidden_states_ = model_hidden_states[query_starts[index_]:query_starts[index_+1]]
             
             reranked_layerwise_docs = dict({})
 
@@ -130,15 +131,15 @@ def zeroshot_rerank(args):
                     dict(
                         {
                             "rank": i,
-                            "docid": retrieved_docs[order[i]]["docid"],
+                            "docid": retrieved_docs_[order[i]]["docid"],
                             "score": scores[i],
-                            "text": retrieved_docs[order[i]]["text"],
+                            "text": retrieved_docs_[order[i]]["text"],
                         }
                     )
-                    for i in range(len(retrieved_docs))
+                    for i in range(len(retrieved_docs_))
                 ]
 
-            query_to_retrieved_docs[query_index+query_index_in_batch]["reranked_retrieved_docs"] = reranked_layerwise_docs
+            query_to_retrieved_docs[query_index+index_]["reranked_retrieved_docs"] = reranked_layerwise_docs
 
     doc_retrieval["reranking_args"] = vars(args)
 
@@ -158,7 +159,7 @@ if __name__ == "__main__":
     parser.add_argument("--run-name", type=str, default=None)
     parser.add_argument("--rerank-model", type=str, default=None)
     parser.add_argument("--topK", type=int, default=16)
-    parser.add_argument("--batch-size", type=int, default=64)
+    parser.add_argument("--batch-size", type=int, default=1)
     parser.add_argument("--max-length", type=int, default=256)
     args = parser.parse_args()
 
