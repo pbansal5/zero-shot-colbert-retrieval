@@ -92,7 +92,7 @@ def get_bm25_documents(args):
         return query_str
 
     for i in tqdm.tqdm(range(0, len(query_to_retrieved_docs), batch_size)):
-        query_data = query_to_retrieved_docs[i:batch_size]
+        query_data = query_to_retrieved_docs[i:i+batch_size]
 
         query_string = [get_query_string(d["begin_location"]) for d in query_data]
 

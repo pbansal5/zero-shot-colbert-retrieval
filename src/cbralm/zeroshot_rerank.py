@@ -58,7 +58,7 @@ def zeroshot_rerank(args):
 
     with open(os.path.join(args.project_name, "run.json"), "r") as f:
         doc_retrieval = json.load(f)
-        query_to_retrieved_docs = doc_retrieval["query_to_retrieved_docs"]
+        query_to_retrieved_docs = doc_retrieval["query_to_retrieved_docs"][1:]
 
     logging.info("Creating Model...")
     if args.data_dir:
@@ -82,13 +82,14 @@ def zeroshot_rerank(args):
 
     num_queries_in_batch = int(args.batch_size)
     
+
     for query_index in tqdm.tqdm(range(0,len(query_to_retrieved_docs),num_queries_in_batch)):
-        query_info = [query_to_retrieved_docs[i] for i in range(query_index,query_index+num_queries_in_batch)]
+        query_info = query_to_retrieved_docs[query_index:query_index+num_queries_in_batch]
         query = [query_info_["query"] for query_info_ in query_info]
         retrieved_docs = [query_info_["retrieved_docs"] for query_info_ in query_info]
 
-        # Reranking with the ColBert objective
 
+        # Reranking with the ColBert objective
 
         sentences,query_starts = [],[0]
         for query_,retrieved_docs_ in zip(query,retrieved_docs):
@@ -121,7 +122,7 @@ def zeroshot_rerank(args):
 
 
         for index_,retrieved_docs_ in enumerate(retrieved_docs):
-            model_hidden_states_ = model_hidden_states[query_starts[index_]:query_starts[index_+1]]
+            model_hidden_states_ = [hidden_state[query_starts[index_]:query_starts[index_+1]] for hidden_state in model_hidden_states]
             
             reranked_layerwise_docs = dict({})
 
@@ -159,7 +160,7 @@ if __name__ == "__main__":
     parser.add_argument("--run-name", type=str, default=None)
     parser.add_argument("--rerank-model", type=str, default=None)
     parser.add_argument("--topK", type=int, default=16)
-    parser.add_argument("--batch-size", type=int, default=1)
+    parser.add_argument("--batch-size", type=int, default=8)
     parser.add_argument("--max-length", type=int, default=256)
     args = parser.parse_args()
 

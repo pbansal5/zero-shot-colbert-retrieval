@@ -5,3 +5,4 @@ python3 -m cbralm.zeroshot_rerank \
     --retrieval-corpus 'wikipedia-dpr-100w' \
     --rerank-model 'bert-base-uncased' \
     --topK 16 \
+    --batch-size 8 \
