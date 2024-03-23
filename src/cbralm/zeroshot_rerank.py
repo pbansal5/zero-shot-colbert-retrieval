@@ -11,8 +11,8 @@ import argparse
 import json
 import logging
 
-from manage_project import add_to_project
-from file_utils import print_args
+from .manage_project import add_to_project
+from .file_utils import print_args
 
 
 def MaxSim(query_embed, docs_embed):
@@ -56,7 +56,7 @@ def MaxSim(query_embed, docs_embed):
 @torch.no_grad()
 def zeroshot_rerank(args):
 
-    with open(args.bm25_file, "r") as f:
+    with open(os.path.join(args.project_name, "run.json"), "r") as f:
         doc_retrieval = json.load(f)
         query_to_retrieved_docs = doc_retrieval["query_to_retrieved_docs"]
 
@@ -79,7 +79,7 @@ def zeroshot_rerank(args):
     searcher = LuceneSearcher.from_prebuilt_index(args.retrieval_corpus)
 
     logging.info("ReRanking Queries")
-    for query_info in tqdm.tqdm(query_to_retrieved_docs):
+    for query_info in tqdm.tqdm(query_to_retrieved_docs[:100]):
         query = query_info["query"]
         retrieved_docs = query_info["retrieved_docs"]
 
@@ -138,7 +138,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--project-name", type=str, default=None)
     parser.add_argument("--run-name", type=str, default=None)
-    parser.add_argument("--rerank_model", type=str, default=None)
+    parser.add_argument("--rerank-model", type=str, default=None)
     parser.add_argument("--topK", type=int, default=16)
     parser.add_argument("--max-length", type=int, default=256)
     args = parser.parse_args()

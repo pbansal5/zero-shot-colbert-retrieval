@@ -1,18 +1,24 @@
 export MODEL_NAME='gpt2'
-export OUTPUT_DIR='logs/results-gp2-bert-base'
-export RETRIEVAL_FILE='jsons/bert_reranked_wikitext_rql_32_rs_4_topK_16.json'
+export PROJECT_NAME='logs/wikitext_rql_32_rs_4_topK_100'
+export RUN_NAME='results-baseline-bm25-random'
+export RETRIEVAL_FILE='logs/wikitext_rql_32_rs_4_topK_100/run.json'
 
 python3 -m benchmark.eval_lm \
-    --model_name $MODEL_NAME \
-    --dataset_path wikitext \
-    --dataset_name wikitext-103-v1 \
-    --dataset_split 'validation' \
-    --output_dir $OUTPUT_DIR \
+    --model-name $MODEL_NAME \
+    --dataset-path wikitext \
+    --dataset-name wikitext-103-v1 \
+    --dataset-split 'validation' \
+    --run-name $RUN_NAME \
+    --project-name $PROJECT_NAME \
+    --retrieved-file $RETRIEVAL_FILE \
+    --ranking-strategy 'random' \
     --stride 4 \
-    --max_length 32 \
-    --retrieved_file $RETRIEVAL_FILE \
-    --ranking_strategy 'colbert' \
-    --num_docs_to_rank 16 \
-    --ranking_logprob_past_tokens 16 \
-    --retrieved_max_length 32 \
-    --model_layer 12
+    --max-length 1024 \
+    --num-docs-to-rank 16 \
+    --ranking-logprob-past-tokens 16 \
+    --retrieved-max-length 32 \
+
+
+
+#    --ranking-strategy 'colbert' \
+#    --model-layer 12

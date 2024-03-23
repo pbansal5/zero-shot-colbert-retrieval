@@ -12,9 +12,10 @@ def create_project(name: str):
 
 
 def add_to_project(module: str, parent: str):
-    # Create Module if it doesn't already exist
-
+    # Create Module 
     save_path = os.path.join(parent, module)
-    os.makedirs(save_path, exist_ok=True)
+    if os.path.isdir(save_path):
+        raise FileExistsError("Run Already Exists. Don't overwrite your data")
+    os.makedirs(save_path)
 
     return save_path

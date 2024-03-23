@@ -29,15 +29,16 @@ def print_args(args, output_dir=None, output_file=None, retrieval_info=None):
                 f.write(f"{keystr}   {val}\n")
             if retrieval_info is not None:
                 bm25_logging_info = retrieval_info["bm25_logging_info"]
-                reranking_args = retrieval_info["reranking_args"]
                 f.write("\n\n\n")
                 f.write(" **************** BM25 Logging INFO **************** \n")
                 for key, val in sorted(bm25_logging_info.items()):
                     keystr = "{}".format(key) + (" " * (30 - len(key)))
                     f.write(f"{keystr}   {val}\n")
 
-                f.write("\n\n\n")
-                f.write(" **************** Reranking Logging INFO **************** \n")
-                for key, val in sorted(reranking_args.items()):
-                    keystr = "{}".format(key) + (" " * (30 - len(key)))
-                    f.write(f"{keystr}   {val}\n")
+                if "reranking_args" in retrieval_info:
+                    reranking_args = retrieval_info["reranking_args"]
+                    f.write("\n\n\n")
+                    f.write(" **************** Reranking Logging INFO **************** \n")
+                    for key, val in sorted(reranking_args.items()):
+                        keystr = "{}".format(key) + (" " * (30 - len(key)))
+                        f.write(f"{keystr}   {val}\n")

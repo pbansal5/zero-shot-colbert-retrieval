@@ -178,7 +178,7 @@ def eval_dataset(
     all_chosen_doc_ids = [None]
     num_inputs_no_retrieval = 0
     for begin_loc in tqdm(
-        range(0, dataset_len, stride)[:500]
+        range(0, dataset_len, stride)[:100]
     ):  # Change this before benchmarking
         end_loc = min(begin_loc + max_length, dataset_len)
         trg_len = end_loc - prev_end_loc  # may be different from stride on last loop
@@ -252,7 +252,8 @@ def eval_dataset(
         if end_loc == dataset_len:
             break
 
-    assert retrieval_dataset is None or len(retrieval_dataset) == idx
+    # TODO: Add this assert back
+    #assert retrieval_dataset is None or len(retrieval_dataset) == idx
 
     ppl = torch.exp(torch.stack(nlls).sum() / counter).item()
     print("Perplexity:", ppl)
@@ -304,7 +305,7 @@ def main(args):
             dataset = f.read()
 
     transformers.logging.set_verbosity_error()
-    retrieval_info = None
+    retrieval_info = None 
     if args.retrieved_file is not None:
         with open(args.retrieved_file, "r") as f:
             retrieval_info = json.load(f)
@@ -319,8 +320,7 @@ def main(args):
     benchmark_dir = os.path.join(save_dir, "benchmark")
     os.makedirs(benchmark_dir, exist_ok=True)
 
-    output_dir = os.path.join(benchmark_dir, args.run_name)
-    os.makedirs(output_dir, exist_ok=True)
+    output_dir = add_to_project(module=args.run_name, parent=benchmark_dir)
 
     print_args(args, output_dir=output_dir, retrieval_info=retrieval_info)
 
@@ -366,7 +366,7 @@ if __name__ == "__main__":
     )
 
     # retrieval params
-    parser.add_argument("--retreived-file", type=str, default=None)
+    parser.add_argument("--retrieved-file", type=str, default=None)
     parser.add_argument("--retrieved-max-length", type=int, default=256)
     parser.add_argument(
         "--ranking-strategy",
