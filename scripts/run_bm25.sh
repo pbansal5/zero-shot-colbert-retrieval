@@ -1,10 +1,11 @@
 python3 -m cbralm.bm25_retrieval \
-    --data_dir '' \
-    --output_file 'jsons/wikitext_rql_32_rs_4_topK_100.json' \
-    --retrieval_corpus 'wikipedia-dpr-100w' \
-    --query_corpus 'wikitext' \
+    --project-name 'wikitext_rql_32_rs_4_topK_100' \
+    --data-dir '' \
+    --retrieval-corpus 'wikipedia-dpr-100w' \
+    --query-corpus 'wikitext' \
+    --forbidden-titles 'wikitext_forbidden_titles.txt' \
     --tokenizer 'gpt2' \
-    --retrieval_query_length 32 \
-    --retrieval_stride 4 \
+    --retrieval-query-length 32 \
+    --retrieval-stride 4 \
+    --max-length 1024 \
     --topK 100 \
-    --forbidden_titles 'jsons/wikitext_forbidden_titles.txt' \

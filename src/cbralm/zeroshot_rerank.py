@@ -9,6 +9,10 @@ import os
 import tqdm
 import argparse
 import json
+import logging
+
+from manage_project import add_to_project
+from file_utils import print_args
 
 
 def MaxSim(query_embed, docs_embed):
@@ -51,12 +55,12 @@ def MaxSim(query_embed, docs_embed):
 
 @torch.no_grad()
 def zeroshot_rerank(args):
-    reranked_to_retrieved_docs = dict({})
 
     with open(args.bm25_file, "r") as f:
         doc_retrieval = json.load(f)
         query_to_retrieved_docs = doc_retrieval["query_to_retrieved_docs"]
 
+    logging.info("Creating Model...")
     if args.data_dir:
         datasets.config.DOWNLOADED_DATASETS_PATH = Path(args.data_dir)
         datasets.config.HF_DATASETS_CACHE = Path(args.data_dir)
@@ -74,15 +78,10 @@ def zeroshot_rerank(args):
     model = AutoModel.from_pretrained(args.rerank_model).cuda()
     searcher = LuceneSearcher.from_prebuilt_index(args.retrieval_corpus)
 
+    logging.info("ReRanking Queries")
     for query_info in tqdm.tqdm(query_to_retrieved_docs):
-        start = query_info["begin_location"]
-        end = query_info["end_location"]
-        query = query_info["query_seg"]
+        query = query_info["query"]
         retrieved_docs = query_info["retrieved_docs"]
-
-        # Need to do some assert to ensure query is the same
-
-        assert len(retrieved_docs) > args.topK, "There are not enough retrieved docs"
 
         # Reranking with the ColBert objective
         sentences = [query] + [
@@ -109,14 +108,13 @@ def zeroshot_rerank(args):
         reranked_layerwise_docs = dict({})
         for layer, hidden_state in enumerate(model_hidden_states):
             order, scores = MaxSim(hidden_state[0:1], hidden_state[1:])
-            # TODO: Need to add text and title here
-            reranked_layerwise_docs["layer%d" % layer] = [
+            reranked_layerwise_docs[f"layer{layer}"] = [
                 dict(
                     {
                         "rank": i,
                         "docid": retrieved_docs[order[i]]["docid"],
                         "score": scores[i],
-                        "text": retrieved_docs[order[i]]["text"]
+                        "text": retrieved_docs[order[i]]["text"],
                     }
                 )
                 for i in range(len(retrieved_docs))
@@ -134,19 +132,28 @@ if __name__ == "__main__":
     parser.add_argument(
         "--data_dir", type=str, default=None
     )  # '/datastor1/pbansal/huggingface_cache', /home/pb25659/huggingface_cache
-    parser.add_argument("--bm25_file", type=str, default=None)  #
     parser.add_argument(
         "--retrieval_corpus", type=str, default=None
     )  # wikipedia-dpr-100w
-    parser.add_argument("--reranked_file", type=str, default=None)
+
+    parser.add_argument("--project-name", type=str, default=None)
+    parser.add_argument("--run-name", type=str, default=None)
     parser.add_argument("--rerank_model", type=str, default=None)
     parser.add_argument("--topK", type=int, default=16)
     parser.add_argument("--max_length", type=int, default=256)
     args = parser.parse_args()
 
+    # Create project submodule
+    if not os.path.isdir(args.project_name):
+        assert FileNotFoundError(f"Project {args.project_name} does not exits")
+    save_path = add_to_project(module=args.run_name, parent=args.project_name)
+
+    # Log Information
+    print_args(args, output_dir=save_path)
+
+    # Run Retrieval
     output_json = zeroshot_rerank(args)
 
-    Path(args.reranked_file).parent.mkdir(parents=True, exist_ok=True)
-
-    with open(args.reranked_file, "w") as f:
+    logging.info("Saving Run...")
+    with open(os.path.join(save_path, "run.json"), "w") as f:
         json.dump(output_json, f)

@@ -1,0 +1,11 @@
+ **************** Benchmark Params **************** data_dir                         
+forbidden_titles                 wikitext_forbidden_titles.txt
+max_length                       1024
+project_name                     wikitext_rql_32_rs_4_topK_100
+query_corpus                     wikitext
+retrieval_corpus                 wikipedia-dpr-100w
+retrieval_query_length           32
+retrieval_stride                 4
+retrieval_type                   None
+tokenizer                        gpt2
+topK                             100
