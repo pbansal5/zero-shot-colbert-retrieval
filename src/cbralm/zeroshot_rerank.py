@@ -1,4 +1,5 @@
 import torch
+from torch import einsum
 import numpy as np
 import datasets
 from pathlib import Path
@@ -26,9 +27,10 @@ def MaxSim(query_embed, docs_embed):
         docs_embed / torch.norm(docs_embed, dim=-1).clamp(min=1e-5)[:, :, None]
     )
 
-    tokenwise_similarity = (
-        query_embed_normalized[:, :, None, :] * docs_embed_normalized[:, None, :, :]
-    ).sum(axis=-1)
+    #tokenwise_similarity = (
+    #    query_embed_normalized[:, :, None, :] * docs_embed_normalized[:, None, :, :]
+    #).sum(axis=-1)
+    tokenwise_similarity = einsum('qtd,red->qrte', query_embed_normalized, docs_embed_normalized).squeeze(dim=0)
     # shape of tokenwise_similarity is (# of docs) x (# of query tokens) x (# of document tokens).
     # as an example, if there are 16 retrieved documents for each query, and there are 256 tokens in both query and document,
     # tokenwise_similarity is 16x256x256
@@ -51,6 +53,7 @@ def MaxSim(query_embed, docs_embed):
     order = torch.argsort(sum_over_querytokens_similarity, descending=True)
 
     return order, avg_over_querytokens_similarity[order].cpu().tolist()
+
 
 
 @torch.no_grad()
@@ -78,7 +81,7 @@ def zeroshot_rerank(args):
     model = AutoModel.from_pretrained(args.rerank_model).cuda().eval()
     searcher = LuceneSearcher.from_prebuilt_index(args.retrieval_corpus)
 
-    logging.info("ReRanking Queries")
+    logging.info("ReRanking Queries...")
 
     num_queries_in_batch = int(args.batch_size)
     
@@ -121,26 +124,26 @@ def zeroshot_rerank(args):
             ]
 
 
-        for index_,retrieved_docs_ in enumerate(retrieved_docs):
-            model_hidden_states_ = [hidden_state[query_starts[index_]:query_starts[index_+1]] for hidden_state in model_hidden_states]
-            
-            reranked_layerwise_docs = dict({})
+            for index_,retrieved_docs_ in enumerate(retrieved_docs):
+                model_hidden_states_ = [hidden_state[query_starts[index_]:query_starts[index_+1]] for hidden_state in model_hidden_states]
+                
+                reranked_layerwise_docs = dict({})
 
-            for layer, hidden_state in enumerate(model_hidden_states_):
-                order, scores = MaxSim(hidden_state[0:1], hidden_state[1:])
-                reranked_layerwise_docs[f"layer{layer}"] = [
-                    dict(
-                        {
-                            "rank": i,
-                            "docid": retrieved_docs_[order[i]]["docid"],
-                            "score": scores[i],
-                            "text": retrieved_docs_[order[i]]["text"],
-                        }
-                    )
-                    for i in range(len(retrieved_docs_))
-                ]
+                for layer, hidden_state in enumerate(model_hidden_states_):
+                    order, scores = MaxSim(hidden_state[0:1], hidden_state[1:])
+                    reranked_layerwise_docs[f"layer{layer}"] = [
+                        dict(
+                            {
+                                "rank": i,
+                                "docid": retrieved_docs_[order[i]]["docid"],
+                                "score": scores[i],
+                                "text": retrieved_docs_[order[i]]["text"],
+                            }
+                        )
+                        for i in range(len(retrieved_docs_))
+                    ]
 
-            query_to_retrieved_docs[query_index+index_]["reranked_retrieved_docs"] = reranked_layerwise_docs
+                query_to_retrieved_docs[query_index+index_]["reranked_retrieved_docs"] = reranked_layerwise_docs
 
     doc_retrieval["reranking_args"] = vars(args)
 
@@ -160,7 +163,7 @@ if __name__ == "__main__":
     parser.add_argument("--run-name", type=str, default=None)
     parser.add_argument("--rerank-model", type=str, default=None)
     parser.add_argument("--topK", type=int, default=16)
-    parser.add_argument("--batch-size", type=int, default=8)
+    parser.add_argument("--batch-size", type=int, default=4)
     parser.add_argument("--max-length", type=int, default=256)
     args = parser.parse_args()
 
