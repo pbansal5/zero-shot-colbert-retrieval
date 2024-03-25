@@ -121,7 +121,6 @@ def get_bm25_documents(args):
                         "rank": i,
                         "docid": filtered_hits[i].docid,
                         "score": filtered_hits[i].score,
-                        "text": json.loads(filtered_hits[i].raw)["contents"],
                     }
                 )
                 for i in range(min(args.topK, len(filtered_hits)))

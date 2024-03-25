@@ -137,7 +137,6 @@ def zeroshot_rerank(args):
                                 "rank": i,
                                 "docid": retrieved_docs_[order[i]]["docid"],
                                 "score": scores[i],
-                                "text": retrieved_docs_[order[i]]["text"],
                             }
                         )
                         for i in range(len(retrieved_docs_))

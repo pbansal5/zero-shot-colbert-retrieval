@@ -2,11 +2,13 @@ import os
 import argparse
 import json
 import pickle
+import json
 
 import numpy as np
 import transformers
 import torch
 from torch.nn import CrossEntropyLoss
+from pyserini.search.lucene import LuceneSearcher
 from tqdm import tqdm
 from datasets import load_dataset
 
@@ -18,6 +20,7 @@ from cbralm.manage_project import create_project, add_to_project
 def evaluate_logprob_with_retrieved_docs(
     model,
     tokenizer,
+    searcher,
     device,
     encodings,
     begin_loc,
@@ -75,13 +78,7 @@ def evaluate_logprob_with_retrieved_docs(
     for doc_id in range(num_docs):
         retrieved_example = retrieved_item["retrieved_docs"][doc_id]
 
-        doc_title = retrieved_example["title"] if "title" in retrieved_example else None
-        doc_text = retrieved_example["text"]
-        if doc_title:
-            doc_text = doc_title + "\n" + doc_text
-        encoded_retrieved_text = tokenizer.encode(
-            doc_text, max_length=retrieval_max_length, truncation=True
-        )
+        doc_text = json.load(searcher.doc(retrieved_example["text"]).raw())["contents"]
 
         # Changing this
         input_ids[doc_id, : len(encoded_retrieved_text)] = torch.tensor(
@@ -135,6 +132,7 @@ def evaluate_logprob_with_retrieved_docs(
 def eval_dataset(
     model,
     tokenizer,
+    searcher,
     dataset,
     device,
     max_length,
@@ -163,6 +161,7 @@ def eval_dataset(
         raise ValueError(f"Unknown normalization_level: '{normalization_level}'")
 
     print("Normalization factor (num tokens/words..):", counter)
+
 
     # Get the retrieved dataset
     retrieval_dataset = None
@@ -199,6 +198,7 @@ def eval_dataset(
                 evaluate_logprob_with_retrieved_docs(
                     model,
                     tokenizer,
+                    searcher,
                     device,
                     encodings,
                     begin_loc,
@@ -324,9 +324,13 @@ def main(args):
 
     print_args(args, output_dir=output_dir, retrieval_info=retrieval_info)
 
+    # Create Searcher
+    searcher = LuceneSearcher.from_prebuilt_index(args.retrieval_corpus)
+
     eval_dataset(
         model,
         tokenizer,
+        searcher,
         dataset,
         device,
         max_length=max_length,
