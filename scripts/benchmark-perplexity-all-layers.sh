@@ -10,6 +10,7 @@ do
         --model-name $MODEL_NAME \
         --dataset-path wikitext \
         --dataset-name wikitext-103-v1 \
+        --retrieval-corpus 'wikipedia-dpr-100w' \
         --dataset-split 'test' \
         --run-name "$RUN_NAME-layer-$i" \
         --project-name $PROJECT_NAME \

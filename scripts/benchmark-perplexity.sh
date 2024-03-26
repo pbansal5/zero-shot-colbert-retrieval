@@ -7,6 +7,7 @@ python3 -m benchmark.eval_lm \
     --model-name $MODEL_NAME \
     --dataset-path wikitext \
     --dataset-name wikitext-103-v1 \
+    --retrieval-corpus 'wikipedia-dpr-100w' \
     --dataset-split 'test' \
     --run-name $RUN_NAME \
     --project-name $PROJECT_NAME \

@@ -78,7 +78,7 @@ def evaluate_logprob_with_retrieved_docs(
     for doc_id in range(num_docs):
         retrieved_example = retrieved_item["retrieved_docs"][doc_id]
 
-        doc_text = json.load(searcher.doc(retrieved_example["text"]).raw())["contents"]
+        doc_text = json.load(searcher.doc(retrieved_example["docid"]).raw())["contents"]
 
         # Changing this
         input_ids[doc_id, : len(encoded_retrieved_text)] = torch.tensor(
@@ -368,6 +368,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--normalization_level", choices=["word", "token"], default="word"
     )
+    parser.add_argument(
+        "--retrieval-corpus", type=str, default=None
+    )  # wikipedia-dpr-100w
 
     # retrieval params
     parser.add_argument("--retrieved-file", type=str, default=None)
