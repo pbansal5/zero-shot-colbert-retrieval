@@ -13,6 +13,8 @@
 
 ## Setup
 
+Install python 3.8 first.
+
 To install the required libraries in our repo, run:
 ```bash
 pip install -r requirements.txt
@@ -28,6 +30,8 @@ conda install openjdk=11
 ## Retrieval
 
 ### BM25
+
+Java 11 is required to run bm25 retrieval with pyserini.
 
 ```bash
 python prepare_retrieval_data.py \

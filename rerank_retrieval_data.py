@@ -37,7 +37,7 @@ def main(args):
     print(f"Finished processing {len(retrieval_dataset)} queries")
     print(f"Writing to {args.output_file}")
     with open(args.output_file, "w") as f:
-        f.write(json.dumps(data, indent=4))
+        f.write(json.dumps(retrieval_dataset, indent=4))
         f.write("\n")
 
     print("Done!")
