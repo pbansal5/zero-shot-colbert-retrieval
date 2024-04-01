@@ -40,18 +40,18 @@ Java 11 is required to run bm25 retrieval with pyserini.
 
 ```bash
 python prepare_retrieval_data.py \
---retrieval_type sparse \
---tokenizer_name $MODEL_NAME \
---max_length 1024 \
---dataset_path wikitext \
---dataset_name wikitext-103-v1 \
---dataset_split [validation, test] \
---index_name wikipedia-dpr \
---forbidden_titles_path ralm/retrievers/wikitext103_forbidden_titles.txt \
---stride 4 \
---output_file $RETRIEVAL_FILE \
---num_tokens_for_query 32 \
---num_docs 16 
+  --retrieval_type sparse \
+  --tokenizer_name $MODEL_NAME \
+  --max_length 1024 \
+  --dataset_path wikitext \
+  --dataset_name wikitext-103-v1 \
+  --dataset_split [validation, test] \
+  --index_name wikipedia-dpr \
+  --forbidden_titles_path ralm/retrievers/wikitext103_forbidden_titles.txt \
+  --stride 4 \
+  --output_file $RETRIEVAL_FILE \
+  --num_tokens_for_query 32 \
+  --num_docs 16 
 ```
 
 ## Reranking
@@ -64,13 +64,13 @@ To run reranking with zero shot colbert.
 
 ```bash
 python rerank_retrieval_data.py \
-    --reranking_type [colbert, bert] \
-    --model_name gpt2 \
-    --batch_size 1 \
-    --output_file $OUTPUT_DIR \
-    --retrieved_file $RETRIEVAL_FILE \
-    --max_length 256 \
-    --num_docs_to_rank 16 
+  --reranking_type [colbert, bert] \
+  --model_name gpt2 \
+  --batch_size 1 \
+  --output_file $OUTPUT_DIR \
+  --retrieved_file $RETRIEVAL_FILE \
+  --max_length 256 \
+  --num_docs_to_rank 16 
 ```
 
 ### ColBERT
@@ -102,14 +102,14 @@ Finally we can do more coarse reranking using a BERT model trained on MS MARCO.
 To run evaluation on models without retrieval, please use the following command (you can increase `stride` to 32 for faster evaluation):
 ```bash
 python eval_lm.py \
---model_name $MODEL_NAME \
---dataset_path wikitext \
---dataset_name wikitext-103-v1 \
---dataset_split [validation, test] \
---output_dir $OUTPUT_DIR \
---stride 4 \
---max_length 1024 \
-[--model_parallelism]
+  --model_name $MODEL_NAME \
+  --dataset_path wikitext \
+  --dataset_name wikitext-103-v1 \
+  --dataset_split [validation, test] \
+  --output_dir $OUTPUT_DIR \
+  --stride 4 \
+  --max_length 1024 \
+  [--model_parallelism]
 ```
 
 ### Evaluate models with retrieval:
@@ -117,15 +117,15 @@ python eval_lm.py \
 To run models with retrieval, use the `$RETRIEVAL_FILE` output from the `prepare_retrieval_data.py` script:
 ```bash
 python eval_lm.py \
---model_name $MODEL_NAME \
---dataset_path wikitext \
---dataset_name wikitext-103-v1 \
---dataset_split [validation, test] \
---output_dir $OUTPUT_DIR \
---stride 4 \
---max_length 1024 \
-[--model_parallelism] \
---retrieved_file $RETRIEVAL_FILE
+  --model_name $MODEL_NAME \
+  --dataset_path wikitext \
+  --dataset_name wikitext-103-v1 \
+  --dataset_split [validation, test] \
+  --output_dir $OUTPUT_DIR \
+  --stride 4 \
+  --max_length 1024 \
+  [--model_parallelism] \
+  --retrieved_file $RETRIEVAL_FILE
 ```
 
 Note: Our main retrieval flow assumes you want to use the top-scored passage from your retrieval file (`--ranking_strategy first`).
@@ -137,19 +137,19 @@ To run model with reranking, use the `$RERANKING_FILE` output from `rerank_retri
 Then run:
 ```bash
 python eval_lm.py \
---model_name $MODEL_NAME \
---dataset_path wikitext \
---dataset_name wikitext-103-v1 \
---dataset_split [validation, test] \
---output_dir $OUTPUT_DIR \
---stride 4 \
---max_length 1024 \
-[--model_parallelism] \
---retrieved_file $RERANK_FILE \
---ranking_strategy first-rerank \
---layer -1 \ # For strategies that require a layer
---num_docs_to_rank 16 \
---ranking_logprob_past_tokens 16
+  --model_name $MODEL_NAME \
+  --dataset_path wikitext \
+  --dataset_name wikitext-103-v1 \
+  --dataset_split [validation, test] \
+  --output_dir $OUTPUT_DIR \
+  --stride 4 \
+  --max_length 1024 \
+  [--model_parallelism] \
+  --retrieved_file $RERANK_FILE \
+  --ranking_strategy first-rerank \
+  --layer -1 \ # For strategies that require a layer
+  --num_docs_to_rank 16 \
+  --ranking_logprob_past_tokens 16
 ```
 
 Note: The reranked file doesn't store documents in sorted order, thus `--ranking_strategy first-rerank` will dynamically find the top scoring document.
