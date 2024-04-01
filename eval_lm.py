@@ -41,9 +41,10 @@ def evaluate_logprob_with_retrieved_docs(
         num_docs = 1
     elif ranking_strategy == "first-rerank":
         best_doc = None
-        for doc in retrieved_item["retrieved_docs"]:
+        for i, doc in enumerate(retrieved_item["retrieved_docs"]):
             if best_doc is None or best_doc["score"][layer] < doc["score"][layer]:
                 best_doc = doc
+                chosen_doc_id = i
         num_docs = 1
         retrieved_item["retrieved_docs"] = [best_doc]
 
@@ -73,7 +74,7 @@ def evaluate_logprob_with_retrieved_docs(
         lm_logits = model(input_ids).logits
 
         # Rank:
-        if ranking_strategy in ["first", "random"]:
+        if ranking_strategy in ["first", "random", "first-rerank"]:
             batch_doc_id = 0
         else:
             if ranking_strategy == "oracle":

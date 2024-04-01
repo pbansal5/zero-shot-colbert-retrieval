@@ -2,6 +2,7 @@
 
 ## Table of Contents
 - [Setup](#setup)
+- [TODO](#todo)
 - [Retrieval](#retrieval)
 - [Reranking](#reranking)
 - [Evaluation](#evaluation)
@@ -26,6 +27,10 @@ To install Java using conda, run:
 ```bash
 conda install openjdk=11
 ```
+
+## TODO 
+
+Checkout the todo section in the [doc](https://docs.google.com/document/d/172iMLu2UBYaihZPa6I8a2wipJBKKXPkITkuS7V9YhDc/edit?usp=sharing).
 
 ## Retrieval
 

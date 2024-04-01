@@ -31,6 +31,6 @@ python prepare_retrieval_data.py \
     --index_name wikipedia-dpr \
     --forbidden_titles_path ralm/retrievers/wikitext103_forbidden_titles.txt \
     --stride 4 \
-    --output_file logs/bm25_retrieval \
+    --output_file logs/bm25_retrieval_100 \
     --num_tokens_for_query 32 \
-    --num_docs 16 
+    --num_docs 100 

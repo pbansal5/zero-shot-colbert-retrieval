@@ -10,7 +10,7 @@
 #SBATCH -p gpu-a100-small                 # Queue (partition) name
 #SBATCH -N 1                              # Total # of nodes (must be 1 for serial)
 #SBATCH -n 1                              # Total # of mpi tasks (should be 1 for serial)
-#SBATCH -t 12:00:00                       # Run time (hh:mm:ss)
+#SBATCH -t 18:00:00                       # Run time (hh:mm:ss)
 #SBATCH --mail-user=haydenprairie@utexas.edu
 #SBATCH --mail-type=all                   # Send email at begin and end of job (can assign begin or end as well)
 #SBATCH -A MLL                            # Allocation name
@@ -25,7 +25,7 @@ python rerank_retrieval_data.py \
     --reranking_type colbert \
     --model_name gpt2 \
     --batch_size 1 \
-    --output_file logs/bm25_retrieval_colbert_rerank \
-    --retrieved_file logs/bm25_retrieval \
+    --output_file logs/bm25_retrieval_colbert_rerank_100 \
+    --retrieved_file logs/bm25_retrieval_100 \
     --max_length 256 \
-    --num_docs_to_rank 16 
+    --num_docs_to_rank 100 

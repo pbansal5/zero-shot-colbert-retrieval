@@ -23,7 +23,7 @@ source $WORK/miniconda3/bin/activate inralm
 cd $WORK/projects/in-context-ralm
 
 MODEL_NAME='gpt2'
-RERANKED_FILE='logs/bm25_retrieval_colbert_rerank'
+RERANKED_FILE='bm25_retrieval_colbert_rerank'
 RUN_NAME='bm25_retrieval_gpt2_colbert_rerank'
 NUM_LAYERS=12
 
@@ -38,6 +38,6 @@ do
         --stride 4 \
         --max_length 1024 \
         --retrieved_file "logs/${RERANKED_FILE}" \
-        --ranking-strategy 'first-rerank' \
+        --ranking_strategy 'first-rerank' \
         --layer $i
 done
