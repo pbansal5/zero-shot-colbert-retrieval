@@ -58,6 +58,11 @@ python prepare_retrieval_data.py \
 
 All reranking requires a retrieval file. First run retrieval and then run reranking.
 
+### List of Reranking Methods
+
+
+* ZS-ColBERT: `gpt2`, `gpt2-medium`, `gpt2-large`, `gpt2-xl`, `bert-base-uncased`, 
+
 ### Zero Shot ColBERT
 
 To run reranking with zero shot colbert.

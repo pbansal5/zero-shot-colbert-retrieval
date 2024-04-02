@@ -23,8 +23,8 @@ source $WORK/miniconda3/bin/activate inralm
 cd $WORK/projects/in-context-ralm
 
 MODEL_NAME='gpt2'
-RERANKED_FILE='bm25_retrieval_bert_based_uncased_colbert_rerank'
-RUN_NAME='bm25_retrieval_bert_based_uncased_colbert_rerank_gpt2'
+RERANKED_FILE='bm25_retrieval_colbert_rerank_100'
+RUN_NAME='bm25_retrieval_gpt2_colbert_rerank_100_gpt2'
 NUM_LAYERS=12
 
 for i in $(seq 0 $NUM_LAYERS)
