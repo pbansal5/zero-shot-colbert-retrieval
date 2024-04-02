@@ -20,4 +20,21 @@ def get_reranker(reranker_type, args, tokenizer, model, device):
             min_layer=args.min_layer,
             max_layer=args.max_layer
         )
+    elif reranker_type == "colbert-attention":
+        raise NotImplementedError
+    elif reranker_type == "coarse":
+        raise NotImplementedError
+    elif reranker_type == 'contriever':
+        from ralm.rerankers.contriever_reranker import ContrieverReranker
+        return ContrieverReranker(
+            tokenizer=tokenizer,
+            model=model,
+            device=device,
+            max_length=args.max_length
+        )
+    elif reranker_type == 'spider':
+        raise NotImplementedError
+    elif reranker_type == 'dpr':
+        raise NotImplementedError
     raise ValueError
+

@@ -4,5 +4,5 @@ class BaseReranker:
         self.model = model
         self.device = device
 
-    def rerank(self, query_info, k=1):
+    def rerank(self, query_info, k):
         raise NotImplementedError

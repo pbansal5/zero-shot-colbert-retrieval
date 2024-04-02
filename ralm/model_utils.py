@@ -1,5 +1,5 @@
 import torch
-from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer, LlamaTokenizer
+from transformers import AutoConfig, AutoModel, AutoModelForCausalLM, AutoTokenizer, LlamaTokenizer
 from huggingface_hub import login
 
 
@@ -9,7 +9,7 @@ def load_tokenizer(model_name):
     return AutoTokenizer.from_pretrained(model_name)
 
 
-def load_model_and_tokenizer(model_name, model_parallelism=False, cache_dir=None, auth_token=None):
+def load_model_and_tokenizer(model_name, model_parallelism=False, cache_dir=None, auth_token=None, model_type='causal'):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     device_count = torch.cuda.device_count()
 
@@ -25,7 +25,10 @@ def load_model_and_tokenizer(model_name, model_parallelism=False, cache_dir=None
     if auth_token is not None:
         model_args["use_auth_token"] = auth_token
 
-    model = AutoModelForCausalLM.from_pretrained(model_name, **model_args).eval()
+    if model_type == "normal":
+        model = AutoModel.from_pretrained(model_name, **model_args).eval()
+    elif model_type == "causal":
+        model = AutoModelForCausalLM.from_pretrained(model_name, **model_args).eval()
     if not model_parallelism:
         model = model.to(device)
     tokenizer = load_tokenizer(model_name)

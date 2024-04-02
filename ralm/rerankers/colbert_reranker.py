@@ -47,7 +47,6 @@ class ColbertReranker(BaseReranker):
         ) for t in text]
 
         with torch.no_grad():
-            # Pass throught the model
             model_hidden_states = [self.model(
                 tokens["input_ids"].to(self.device),
                 attention_mask=tokens["attention_mask"].to(self.device),

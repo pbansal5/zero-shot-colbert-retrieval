@@ -9,7 +9,12 @@ from ralm.model_utils import load_model_and_tokenizer
 from ralm.rerankers.reranker_factory import add_reranker_args, get_reranker 
 
 RERANKING_TYPES = [
-    "colbert"
+    "colbert", # Finegrain Inter-layer embedding Reranking
+    "coarse", # Coarse Reranking
+    "colbert-attention", # Finegrain Inter-Attention embedding Reranking
+    "contriever", # https://arxiv.org/pdf/2112.09118.pdf
+    "spider", # https://arxiv.org/pdf/2112.07708.pdf
+    "dpr" # https://arxiv.org/pdf/2004.04906.pdf
 ]
 
 
@@ -22,7 +27,11 @@ def main(args):
     print("Queries to process:", len(retrieval_dataset))
 
     model, tokenizer, config, device = load_model_and_tokenizer(
-        args.model_name, model_parallelism=args.model_parallelism, cache_dir=args.cache_dir, auth_token=args.auth_token
+        args.model_name,
+        model_parallelism=args.model_parallelism,
+        cache_dir=args.cache_dir,
+        auth_token=args.auth_token,
+        model_type = args.model_type
     )
 
     print(f"Creating reranker of type {args.reranking_type}...")
@@ -55,6 +64,7 @@ if __name__ == '__main__':
 
     # Model params
     parser.add_argument("--model_name", type=str, default="gpt2")
+    parser.add_argument("--model_type", type=str, default="causal")
     parser.add_argument("--cache_dir", type=str, default=None)
     parser.add_argument("--model_parallelism", action="store_true")
     parser.add_argument("--auth_token", type=str, default=None)

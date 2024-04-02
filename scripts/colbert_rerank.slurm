@@ -23,9 +23,10 @@ source $WORK/miniconda3/bin/activate inralm
 cd $WORK/projects/in-context-ralm
 python rerank_retrieval_data.py \
     --reranking_type colbert \
-    --model_name gpt2 \
+    --model_name bert-base-uncased \
+    --model_type normal \
     --batch_size 1 \
-    --output_file logs/bm25_retrieval_colbert_rerank_100 \
-    --retrieved_file logs/bm25_retrieval_100 \
+    --output_file logs/bm25_retrieval_bert_based_uncased_colbert_rerank \
+    --retrieved_file logs/bm25_retrieval \
     --max_length 256 \
-    --num_docs_to_rank 100 
+    --num_docs_to_rank 16 
