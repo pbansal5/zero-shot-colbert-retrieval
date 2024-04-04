@@ -10,6 +10,7 @@
   - [Evaluate models w/o retrieval](#evaluate-models-wo-retrieval)
   - [Evaluate models with retrieval](#evaluate-models-with-retrieval)
   - [Evaluate models with reranking](#reranking)
+- [Display Results](#display-results)
 - [Acknowledgements](#acknowledgements)
 
 ## Setup
@@ -33,6 +34,8 @@ conda install openjdk=11
 Checkout the todo section in the [doc](https://docs.google.com/document/d/172iMLu2UBYaihZPa6I8a2wipJBKKXPkITkuS7V9YhDc/edit?usp=sharing).
 
 ## Retrieval
+
+Currently only BM25 retrieval is supported, however this was shown to be the best in [In Context RALM](https://github.com/AI21Labs/in-context-ralm).
 
 ### BM25
 
@@ -61,15 +64,22 @@ All reranking requires a retrieval file. First run retrieval and then run rerank
 ### List of Reranking Methods
 
 
-* ZS-ColBERT: `gpt2`, `gpt2-medium`, `gpt2-large`, `gpt2-xl`, `bert-base-uncased`, 
+* ZS-Col-LLMs: `gpt2`, `gpt2-medium`, `gpt2-large`, `gpt2-xl`, `bert-base-uncased`, 
+* ColBERT: ` `,
+* Bert: ` `,
+* Contriever: ` `,
 
-### Zero Shot ColBERT
+### Zero Shot Col-LLMs
 
-To run reranking with zero shot colbert.
+Zero Shot Col-LLMs utilizes any pretrained LM as a reranker and calculates the query document similarity
+using the maxsim operator. Zero Shot Col-LLMs can use either the inter-layer embeddings or the attention
+projection embeddings to rerank documents.
+
+To run reranking with zero shot Col-LLMs.
 
 ```bash
 python rerank_retrieval_data.py \
-  --reranking_type [colbert, bert] \
+  --reranking_type colbert \
   --model_name gpt2 \
   --batch_size 1 \
   --output_file $OUTPUT_DIR \
@@ -80,7 +90,10 @@ python rerank_retrieval_data.py \
 
 ### ColBERT
 
-We can also use an OOD trained colbert reranker trained on MS MARCO.
+We can also use an OOD trained ColBERT style reranker trained on MS MARCO. While Zero Shot ColBERT could use
+any model, they method specifically relies on LMs pretrained on the ColBERT objective. These towers are BERT Based.
+
+To run reranking with the ColBert objective:
 
 ```bash
 
@@ -88,11 +101,24 @@ We can also use an OOD trained colbert reranker trained on MS MARCO.
 
 ### BERT
 
-Finally we can do more coarse reranking using a BERT model trained on MS MARCO.
+Bert reranking use's the more common coarse grain reranking of a pretrained Bert Tower.
+
+To run reranking with the BERT objective:
 
 ```bash
 
 ```
+
+### Contriever 
+
+Contriever is another coarse grain reranking method introduced in this [paper]().
+
+To run reranking with a Contriever Model:
+
+```bash
+
+```
+
 
 ## Evaluation
 
@@ -158,6 +184,10 @@ python eval_lm.py \
 ```
 
 Note: The reranked file doesn't store documents in sorted order, thus `--ranking_strategy first-rerank` will dynamically find the top scoring document.
+
+## Display Results
+
+We can use the script `summarize_results.py` in order to summarize runs and create graphics.
 
 ## Acknowledgements 
 
