@@ -3,6 +3,8 @@ def add_reranker_args(parser, reranker_type):
         parser.add_argument("--max_length", type=int, default=256)
         parser.add_argument("--min_layer", type=int, default=0)
         parser.add_argument("--max_layer", type=int, default=-1)
+    elif reranker_type == "contriever":
+        parser.add_argument("--max_length", type=int, default=256)
     else:
         raise ValueError
 
@@ -10,7 +12,7 @@ def add_reranker_args(parser, reranker_type):
 def get_reranker(reranker_type, args, tokenizer, model, device):
     if reranker_type == "colbert":
         from ralm.rerankers.colbert_reranker import ColbertReranker
-        if args.model_name == "gpt2":
+        if "gpt2" in args.model_name:
             tokenizer.pad_token = tokenizer.eos_token
         return ColbertReranker(
             tokenizer=tokenizer,
