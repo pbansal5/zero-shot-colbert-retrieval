@@ -39,7 +39,7 @@ def main(args):
 
 
     print("Reranking Documents...")
-    for query_index in tqdm(range(0,len(retrieval_dataset),args.batch_size)):
+    for query_index in tqdm(range(1,len(retrieval_dataset),args.batch_size)):
         query_info = retrieval_dataset[query_index:query_index+args.batch_size]
         reranker.rerank(query_info, k=args.num_docs_to_rank)
 
