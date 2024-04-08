@@ -63,7 +63,9 @@ class ColbertReranker(BaseReranker):
         return score
     
     def new_maxsim_gpt(self, embed, c_attn):
-        query_embed,docs_embed,_ = c_attn(embed).split(self.model.config.hidden_size, dim=2)
+        Q,K,V = c_attn(torch.ones_like(embed)).split(self.model.config.hidden_size, dim=2)
+        query_embed = torch.einsum('ijk,mjk->imj', embed[0:1], Q)
+        docs_embed = torch.einsum('ijk,mjk->imj', embed[1:], K)
         
         query_embed_normalized = (
             query_embed / torch.norm(query_embed, dim=-1).clamp(min=1e-5)[:, :, None]
