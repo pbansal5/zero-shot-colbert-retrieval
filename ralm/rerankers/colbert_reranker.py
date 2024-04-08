@@ -37,13 +37,15 @@ class ColbertReranker(BaseReranker):
         )  # sum_over_querytokens_similarity has shape (# of docs)
         return score
     
-    def new_maxsim(self, query_embed, docs_embed, query, key):
-        query_embed = torch.einsum('ijk,kl->ijl', query_embed, query.weight.data)
-        if query.bias.data is not None:
-            query_embed += query.bias.data
-        docs_embed = torch.einsum('ijk,kl->ijl', docs_embed, key.weight.data)
-        if key.bias.data is not None:
-            docs_embed += key.bias.data
+    def new_maxsim(self, query_embed, docs_embed, query_layer, key_layer):
+        query_embed = query_layer(query_embed)
+        docs_embed = key_layer(docs_embed)
+        # query_embed = torch.einsum('ijk,kl->ijl', query_embed, query.weight.data)
+        # if query.bias.data is not None:
+        #     query_embed += query.bias.data
+        # docs_embed = torch.einsum('ijk,kl->ijl', docs_embed, key.weight.data)
+        # if key.bias.data is not None:
+        #     docs_embed += key.bias.data
 
         query_embed_normalized = (
             query_embed / torch.norm(query_embed, dim=-1).clamp(min=1e-5)[:, :, None]
