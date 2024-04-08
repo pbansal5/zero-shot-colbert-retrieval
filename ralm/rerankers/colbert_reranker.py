@@ -3,6 +3,8 @@ import json
 import torch
 from torch import einsum
 
+import transformers
+
 from ralm.rerankers.base_reranker import BaseReranker 
 
 FALCON_TYPES = ("falcon", "refinedweb", "refinedwebmodel")
@@ -36,9 +38,33 @@ class ColbertReranker(BaseReranker):
         return score
     
     def new_maxsim(self, query_embed, docs_embed, query, key):
-        query_embed = torch.einsum('ijk,kl->ijl', query_embed, query)
-        docs_embed = torch.einsum('ijk,kl->ijl', docs_embed, key)
+        query_embed = torch.einsum('ijk,kl->ijl', query_embed, query.weight.data)
+        if query.bias.data is not None:
+            query_embed += query.bias.data
+        docs_embed = torch.einsum('ijk,kl->ijl', docs_embed, key.weight.data)
+        if key.bias.data is not None:
+            docs_embed += key.bias.data
 
+        query_embed_normalized = (
+            query_embed / torch.norm(query_embed, dim=-1).clamp(min=1e-5)[:, :, None]
+        )
+        docs_embed_normalized = (
+            docs_embed / torch.norm(docs_embed, dim=-1).clamp(min=1e-5)[:, :, None]
+        )
+
+        tokenwise_similarity = einsum('qtd,red->qrte', query_embed_normalized, docs_embed_normalized).squeeze(dim=0)
+
+        max_over_doctokens_similarity = torch.max(
+            tokenwise_similarity, dim=2
+        ).values  # max_over_doctokens_similarity has shape (# of docs) x (# of query tokens)
+        score = max_over_doctokens_similarity.sum(
+            dim=1
+        )  # sum_over_querytokens_similarity has shape (# of docs)
+        return score
+    
+    def new_maxsim_gpt(self, embed, c_attn):
+        query_embed,docs_embed,_ = c_attn(embed).split(self.model.config.hidden_size, dim=2)
+        
         query_embed_normalized = (
             query_embed / torch.norm(query_embed, dim=-1).clamp(min=1e-5)[:, :, None]
         )
@@ -63,13 +89,20 @@ class ColbertReranker(BaseReranker):
             return self.model.transformer.h
         elif self.model.config.model_type == "opt":
             return self.model.model.decoder.layers
+        elif self.model.config.model_type == "gpt2":
+            return self.model.h
         elif self.model.config.model_type == "bert":
             return self.model.encoder.layer
         else:
             raise ValueError(MODEL_ERROR_MSG.format(self.model.config.model_type))
 
-    def find_sublayers(self, module, layers=(torch.nn.Linear)):
+    def find_sublayers(self, module, layers=(torch.nn.Linear, torch.nn.Conv1d, transformers.pytorch_utils.Conv1D)):
         res = {}
+        if self.model.config.model_type == "gpt2":
+            for name, layer in module.named_modules():
+                if isinstance(layer, layers) and ("c_attn" in name):
+                    res[name] = layer
+
         for name, layer in module.named_modules():
             if isinstance(layer, layers) and ("k" in name or "q" in name):
                 res[name] = layer
@@ -112,7 +145,10 @@ class ColbertReranker(BaseReranker):
                 score_vec = []
                 for layer_state in qd_states[self.min_layer:self.max_layer-1]:
                     curr_layer = all_sublayers[i]
-                    score_vec.append(self.new_maxsim(layer_state[0:1], layer_state[1:], curr_layer[sequential[i][0]].weight.data, curr_layer[sequential[i][1]].weight.data))
+                    if self.model.config.model_type == "gpt2":
+                        score_vec.append(self.new_maxsim_gpt(layer_state, curr_layer[sequential[i][0]]))
+                    else:
+                        score_vec.append(self.new_maxsim(layer_state[0:1], layer_state[1:], curr_layer[sequential[i][0]], curr_layer[sequential[i][1]]))
                     i += 1
                 scores.append(torch.stack(score_vec))
             
