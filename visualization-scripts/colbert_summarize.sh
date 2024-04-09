@@ -1,11 +1,11 @@
 python summarize_results.py \
     --benchmark-dir ./benchmark \
-    --sub-group bm25_retrieval_gpt2_colbert_rerank_layer bm25_retrieval_bert_based_uncased_colbert_rerank_gpt2_layer\
+    --sub-group bm25_retrieval_gpt2_colbert_rerank_gpt2_medium_layer \
     --layer-lower 0 \
-    --layer-upper 11 \
+    --layer-upper 35 \
     --baseline baseline \
-    --random bm25_random \
-    --first bm25 \
+    --random bm25_random_medium \
+    --first bm25_first_medium \
     --oracle bm25_oracle \
     --retriever bm25 \
     --reranker gpt2 \
@@ -13,5 +13,6 @@ python summarize_results.py \
     --plot-type plot \
     --plot-style ticks \
     --plot-targets first \
-    --plot-name 'GPT2 vs. Bert' \
-    --plot-save gpt2vBert
+    --indicate-best \
+    --plot-name 'GPT2 Medium' \
+    --plot-save gpt2_small_medium

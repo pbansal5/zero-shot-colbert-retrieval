@@ -10,7 +10,7 @@
 #SBATCH -p gpu-a100-small                 # Queue (partition) name
 #SBATCH -N 1                              # Total # of nodes (must be 1 for serial)
 #SBATCH -n 1                              # Total # of mpi tasks (should be 1 for serial)
-#SBATCH -t 18:00:00                       # Run time (hh:mm:ss)
+#SBATCH -t 24:00:00                       # Run time (hh:mm:ss)
 #SBATCH --mail-user=haydenprairie@utexas.edu
 #SBATCH --mail-type=all                   # Send email at begin and end of job (can assign begin or end as well)
 #SBATCH -A MLL                            # Allocation name
@@ -22,10 +22,10 @@ source $WORK/miniconda3/bin/activate inralm
 # Launch Job
 cd $WORK/projects/in-context-ralm
 
-MODEL_NAME='gpt2'
-RERANKED_FILE='bm25_retrieval_colbert_rerank_100'
-RUN_NAME='bm25_retrieval_gpt2_colbert_rerank_100_gpt2'
-NUM_LAYERS=12
+export MODEL_NAME='gpt2-medium'
+export RERANKED_FILE='bm25_retrieval_gpt2_colbert_rerank'
+export RUN_NAME='bm25_retrieval_gpt2_colbert_rerank_gpt2_medium'
+export NUM_LAYERS=11
 
 for i in $(seq 0 $NUM_LAYERS)
 do 

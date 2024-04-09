@@ -124,8 +124,13 @@ def main(args):
     # Plot results
     if args.plot_type == "plot":
         df = {"x": [x + 1 for x in range(args.layer_lower, args.layer_upper + 1)]}
+        best_x = []
+        best_y = []
         for name, vals in zip(args.sub_group, vals):
             df[name] = vals
+            if args.indicate_best:
+                best_y.append(min(vals))
+                best_x.append(df["x"][vals.index(min(vals))])
         df = pd.DataFrame(df)
         for key in df.keys():
             if key != "x":
@@ -133,6 +138,9 @@ def main(args):
 
         for target in args.plot_targets:
             plt.axhline(y=targets[str(getattr(args, target))], linestyle="--")
+
+        if args.indicate_best:
+            plt.scatter(best_x, best_y, marker="*")
 
         plt.xlabel("Layer")
         plt.ylabel("Perplexity")
@@ -179,6 +187,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--plot-targets", type=str, nargs="+", choices=TARGET_CHOICES, default=None
     )
+    parser.add_argument("--indicate-best", action="store_true", default=False)
     parser.add_argument("--plot-name", type=str, default=None)
     parser.add_argument("--plot-save", type=str, default=None)
     args = parser.parse_args()

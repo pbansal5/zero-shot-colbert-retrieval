@@ -10,7 +10,7 @@
 #SBATCH -p gpu-a100-small                 # Queue (partition) name
 #SBATCH -N 1                              # Total # of nodes (must be 1 for serial)
 #SBATCH -n 1                              # Total # of mpi tasks (should be 1 for serial)
-#SBATCH -t 36:00:00                       # Run time (hh:mm:ss)
+#SBATCH -t 24:00:00                       # Run time (hh:mm:ss)
 #SBATCH --mail-user=haydenprairie@utexas.edu
 #SBATCH --mail-type=all                   # Send email at begin and end of job (can assign begin or end as well)
 #SBATCH -A MLL                            # Allocation name
@@ -22,11 +22,11 @@ source $WORK/miniconda3/bin/activate inralm
 # Launch Job
 cd $WORK/projects/in-context-ralm
 python rerank_retrieval_data.py \
-    --reranking_type colbert \
-    --model_name gpt2-xl \
-    --model_type causal \
+    --reranking_type contriever \
+    --model_name facebook/contriever \
+    --model_type normal \
     --batch_size 1 \
-    --output_file logs/bm25_retrieval_gpt2_xlarge_colbert_rerank \
+    --output_file logs/bm25_retrieval_base_contriever_rerank \
     --retrieved_file logs/bm25_retrieval \
     --max_length 256 \
     --num_docs_to_rank 16 

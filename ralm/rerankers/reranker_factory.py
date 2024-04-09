@@ -1,26 +1,32 @@
 def add_reranker_args(parser, reranker_type):
-    if reranker_type == "colbert":
+    if reranker_type == "zs-colllms":
         parser.add_argument("--max_length", type=int, default=256)
         parser.add_argument("--min_layer", type=int, default=0)
         parser.add_argument("--max_layer", type=int, default=-1)
+        parser.add_argument("--attention", action="store_true", default=False)
     elif reranker_type == "contriever":
         parser.add_argument("--max_length", type=int, default=256)
+    elif reranker_type == "finegrain":
+        raise NotImplementedError
+    elif reranker_type == "coarse":
+        raise NotImplementedError
     else:
         raise ValueError
 
 
 def get_reranker(reranker_type, args, tokenizer, model, device):
-    if reranker_type == "colbert":
-        from ralm.rerankers.colbert_reranker import ColbertReranker
+    if reranker_type == "zs-collms":
+        from ralm.rerankers.colllm_reranker import ColLLMReranker 
         if "gpt2" in args.model_name:
             tokenizer.pad_token = tokenizer.eos_token
-        return ColbertReranker(
+        return ColLLMReranker(
             tokenizer=tokenizer,
             model=model,
             device=device,
             max_length=args.max_length,
             min_layer=args.min_layer,
-            max_layer=args.max_layer
+            max_layer=args.max_layer,
+            attention=args.attention
         )
     elif reranker_type == "colbert-attention":
         raise NotImplementedError

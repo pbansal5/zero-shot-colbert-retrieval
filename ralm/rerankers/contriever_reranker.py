@@ -30,7 +30,7 @@ class ContrieverReranker(BaseReranker):
             max_length=self.max_length,
             padding="max_length", 
             return_tensors='pt'
-        ) for t in text]
+        ).to(self.device) for t in text]
 
         
         # Rerank the Documents

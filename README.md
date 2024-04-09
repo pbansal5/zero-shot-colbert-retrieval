@@ -79,7 +79,22 @@ To run reranking with zero shot Col-LLMs.
 
 ```bash
 python rerank_retrieval_data.py \
-  --reranking_type colbert \
+  --reranking_type zs-colllms \
+  --model_name gpt2 \
+  --batch_size 1 \
+  --output_file $OUTPUT_DIR \
+  --retrieved_file $RETRIEVAL_FILE \
+  --max_length 256 \
+  --num_docs_to_rank 16 
+```
+
+Rather than using embeddings dimension we can also use attention matrix to project embeddings into subspaces
+which can then we used to rerank the documents. To do this we can pass the `--attention` flag.
+
+```bash
+python rerank_retrieval_data.py \
+  --reranking_type zs-colllms \
+  --attention \
   --model_name gpt2 \
   --batch_size 1 \
   --output_file $OUTPUT_DIR \
@@ -118,7 +133,6 @@ To run reranking with a Contriever Model:
 ```bash
 
 ```
-
 
 ## Evaluation
 

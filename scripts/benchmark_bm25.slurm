@@ -22,11 +22,11 @@ source $WORK/miniconda3/bin/activate inralm
 # Launch Job
 cd $WORK/projects/in-context-ralm
 python eval_lm.py \
-    --model_name gpt2 \
+    --model_name gpt2-medium \
     --dataset_path wikitext \
     --dataset_name wikitext-103-v1 \
     --dataset_split test \
-    --output_dir benchmark/bm25_random \
+    --output_dir benchmark/bm25_random_medium \
     --ranking_strategy random \
     --stride 4 \
     --max_length 1024 \
