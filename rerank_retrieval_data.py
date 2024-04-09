@@ -9,9 +9,9 @@ from ralm.model_utils import load_model_and_tokenizer
 from ralm.rerankers.reranker_factory import add_reranker_args, get_reranker 
 
 RERANKING_TYPES = [
-    "colbert", # Finegrain Inter-layer embedding Reranking
+    "zs-llms", # Zero Shot Contrastive Late Interaction Language Models
+    "finegrain", # Finegrain Inter-layer embedding Reranking
     "coarse", # Coarse Reranking
-    "colbert-attention", # Finegrain Inter-Attention embedding Reranking
     "contriever", # https://arxiv.org/pdf/2112.09118.pdf
     "spider", # https://arxiv.org/pdf/2112.07708.pdf
     "dpr" # https://arxiv.org/pdf/2004.04906.pdf

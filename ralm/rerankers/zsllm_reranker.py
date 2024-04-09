@@ -1,9 +1,10 @@
 import json
+from typing import Dict
 
 import torch
 import torch.nn as nn
 from torch import einsum
-from einops import rerange
+from einops import rearrange
 
 import transformers
 
@@ -31,6 +32,15 @@ class ColLLMReranker(BaseReranker):
         self.min_layer = min_layer
         self.max_layer = max_layer
         self.attention = attention
+        self.similarity = similarity
+        if isinstance(model, nn.DataParallel):
+            self.model_attr = self.model.module
+        else:
+            self.model_attr = self.model
+        if self.attention:
+            n_heads, n_key_heads = self._get_num_heads()
+            self.n_heads = n_heads
+            self.n_key_heads = n_key_heads
 
     def _apply_similarity(self, token_similarity: torch.Tensor) -> torch.Tensor:
         if self.similarity == "max":
@@ -50,17 +60,17 @@ class ColLLMReranker(BaseReranker):
         score = token_score.sum(dim=-1) 
         return score
     
-    def _get_query_key_projections(self, query_embed: torch.Tensor, doc_embed: torch.Tensor, projections: dict[nn.Module]):
-        model_name = self.model.config.model_type
+    def _get_query_key_projections(self, query_embed: torch.Tensor, doc_embed: torch.Tensor, projections):
+        model_name = self.model_attr.config.model_type
         if model_name == "gpt2":
             if len(projections) == 1:
                 c_attn = projections["key"]
-                query_proj, _, _ = c_attn(query_embed).split(self.model.config.hidden_size, dim=2)
-                _, docs_proj, _ = c_attn(doc_embed).split(self.model.config.hidden_size, dim=2)
+                query_proj, _, _ = c_attn(query_embed).split(self.model_attr.config.hidden_size, dim=2)
+                _, docs_proj, _ = c_attn(doc_embed).split(self.model_attr.config.hidden_size, dim=2)
             elif len(projections) == 2:
                 q_attn, c_attn = projections["query"], projections["key"]
                 query_proj = q_attn(query_embed)
-                docs_proj, _= c_attn(doc_embed).split(self.model.config.hidden_size, dim=2)
+                docs_proj, _= c_attn(doc_embed).split(self.model_attr.config.hidden_size, dim=2)
         elif model_name in [*LLAMA_LIKE, *FALCON_TYPES, "opt", "bert"]:
             query_projection, key_projection = projections["query"], projections["key"]
             query_proj = query_projection(query_embed)
@@ -69,18 +79,25 @@ class ColLLMReranker(BaseReranker):
             raise ValueError(MODEL_ERROR_MSG.format(model_name))
         return query_proj, docs_proj
     
-    def _maxsim_attention(self, query_embed: torch.Tensor, doc_embed: torch.Tensor, projections: dict[nn.Module]):
+    def _get_num_heads(self):
+        if self.model_attr.config.model_type == "gpt2":
+            n_heads = self.model_attr.config.n_head
+        else:
+            n_heads = self.model_attr.config.n_heads
+        try:
+            n_key_heads = self.model_attr.config.num_key_value_heads
+        except AttributeError:
+            n_key_heads = n_heads
+        return n_heads, n_key_heads
+    
+    def _maxsim_attention(self, query_embed: torch.Tensor, doc_embed: torch.Tensor, projections):
         query_proj, docs_proj = self._get_query_key_projections(query_embed, doc_embed, projections)
 
         # Get number of attention_heads
-        n_heads = self.model.config.n_heads
-        try:
-            n_key_heads = self.model.config.num_key_value_heads
-        except AttributeError:
-            n_key_heads = n_heads
+        n_heads, n_key_heads = self.n_heads, self.n_key_heads
 
-        query_states = rerange(query_proj, "b s (h d) -> b h s d", h=n_heads)
-        key_states = rerange(state_proj, "b s (h d) -> b h s d", h=n_key_heads)
+        query_states = rearrange(query_proj, "b s (h d) -> b h s d", h=n_heads)
+        key_states = rearrange(docs_proj, "b s (h d) -> b h s d", h=n_key_heads)
 
         norm_query_states = query_states / torch.norm(query_states, dim=-1, keepdim=True).clamp(min=1e-5)
         norm_key_states = key_states / torch.norm(key_states, dim=-1, keepdim=True).clamp(min=1e-5)
@@ -88,26 +105,26 @@ class ColLLMReranker(BaseReranker):
         token_similarity = einsum("bhqe,dhke->bdhqk", norm_query_states, norm_key_states).squeeze(dim=0)
 
         token_score = self._apply_similarity(token_similarity)
-        score = max_over_doc_similarity.sum(dim=(-1, -2))
+        score = token_score.sum(dim=(-1, -2))
         return score
     
     def _get_layers(self):
-        if self.model.config.model_type in LLAMA_LIKE:
-            return self.model.model.layers
-        elif self.model.config.model_type.lower() in FALCON_TYPES:
-            return self.model.transformer.h
-        elif self.model.config.model_type == "opt":
-            return self.model.model.decoder.layers
-        elif self.model.config.model_type == "gpt2":
-            return self.model.h
-        elif self.model.config.model_type == "bert":
-            return self.model.encoder.layer
+        if self.model_attr.config.model_type in LLAMA_LIKE:
+            return self.model_attr.model.layers
+        elif self.model_attr.config.model_type.lower() in FALCON_TYPES:
+            return self.model_attr.transformer.h
+        elif self.model_attr.config.model_type == "opt":
+            return self.model_attr.model.decoder.layers
+        elif self.model_attr.config.model_type == "gpt2":
+            return self.model_attr.transformer.h
+        elif self.model_attr.config.model_type == "bert":
+            return self.model_attr.encoder.layer
         else:
-            raise ValueError(MODEL_ERROR_MSG.format(self.model.config.model_type))
+            raise ValueError(MODEL_ERROR_MSG.format(self.model_attr.config.model_type))
 
     def _find_sublayers(self, module: nn.Module, layers=(torch.nn.Linear, torch.nn.Conv1d, transformers.pytorch_utils.Conv1D)):
         res = {}
-        if self.model.config.model_type == "gpt2":
+        if self.model_attr.config.model_type == "gpt2":
             for name, layer in module.named_modules():
                 if isinstance(layer, layers) and ("c_attn" in name or "q_attn" in name):
                     if "c_attn" in name:

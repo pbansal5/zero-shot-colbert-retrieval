@@ -1,9 +1,10 @@
 def add_reranker_args(parser, reranker_type):
-    if reranker_type == "zs-colllms":
+    if reranker_type == "zs-llms":
         parser.add_argument("--max_length", type=int, default=256)
         parser.add_argument("--min_layer", type=int, default=0)
         parser.add_argument("--max_layer", type=int, default=-1)
         parser.add_argument("--attention", action="store_true", default=False)
+        parser.add_argument("--similarity", type=str, default="max")
     elif reranker_type == "contriever":
         parser.add_argument("--max_length", type=int, default=256)
     elif reranker_type == "finegrain":
@@ -15,8 +16,8 @@ def add_reranker_args(parser, reranker_type):
 
 
 def get_reranker(reranker_type, args, tokenizer, model, device):
-    if reranker_type == "zs-collms":
-        from ralm.rerankers.colllm_reranker import ColLLMReranker 
+    if reranker_type == "zs-llms":
+        from ralm.rerankers.zsllm_reranker import ColLLMReranker 
         if "gpt2" in args.model_name:
             tokenizer.pad_token = tokenizer.eos_token
         return ColLLMReranker(
@@ -26,7 +27,8 @@ def get_reranker(reranker_type, args, tokenizer, model, device):
             max_length=args.max_length,
             min_layer=args.min_layer,
             max_layer=args.max_layer,
-            attention=args.attention
+            attention=args.attention,
+            similarity=args.similarity
         )
     elif reranker_type == "colbert-attention":
         raise NotImplementedError

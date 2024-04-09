@@ -79,7 +79,7 @@ To run reranking with zero shot Col-LLMs.
 
 ```bash
 python rerank_retrieval_data.py \
-  --reranking_type zs-colllms \
+  --reranking_type zs-llms \
   --model_name gpt2 \
   --batch_size 1 \
   --output_file $OUTPUT_DIR \
@@ -93,7 +93,7 @@ which can then we used to rerank the documents. To do this we can pass the `--at
 
 ```bash
 python rerank_retrieval_data.py \
-  --reranking_type zs-colllms \
+  --reranking_type zs-llms \
   --attention \
   --model_name gpt2 \
   --batch_size 1 \
@@ -102,6 +102,8 @@ python rerank_retrieval_data.py \
   --max_length 256 \
   --num_docs_to_rank 16 
 ```
+
+The `--similarity` flag can be set to either `max` or `avg`, to run MaxSim and AvgSim respectfully.
 
 ### ColBERT
 
