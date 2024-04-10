@@ -4,6 +4,7 @@ import argparse
 
 import seaborn as sns
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 from prettytable import PrettyTable
 
@@ -54,9 +55,9 @@ def main(args):
                 name
                 for name in group
                 if int(name.strip().split("_")[-1])
-                in range(args.layer_lower, args.layer_upper + 1)
+                in range(args.layer_lower[i], args.layer_upper[i] + 1)
             ]
-            for group in group_runs
+            for i, group in enumerate(group_runs)
         ]
         group_runs = [
             sorted(group, key=lambda x: int(x.strip().split("_")[-1]))
@@ -123,7 +124,14 @@ def main(args):
 
     # Plot results
     if args.plot_type == "plot":
-        df = {"x": [x + 1 for x in range(args.layer_lower, args.layer_upper + 1)]}
+        colors = ["Blues", "Reds", "Oranges", "Greens"]  # Adjust colors as needed
+        markers = ["o", "s", "^", "d"]  # Define markers for each line
+        df = {
+            "x": [
+                list(range(l, u + 1))
+                for l, u in zip(args.layer_lower, args.layer_upper)
+            ]
+        }
         best_x = []
         best_y = []
         for name, vals in zip(args.sub_group, vals):
@@ -131,27 +139,73 @@ def main(args):
             if args.indicate_best:
                 best_y.append(min(vals))
                 best_x.append(df["x"][vals.index(min(vals))])
-        df = pd.DataFrame(df)
-        for key in df.keys():
+        for i, key in enumerate(df.keys()):
             if key != "x":
-                sns.lineplot(data=df, x="x", y=df[key])
+                n = 15
+                c = 0.14
+                f = 9
+                color = (1.0 - c) * plt.get_cmap(colors[i - 1])(
+                    np.linspace(0.0, 1.0, n)
+                ) + c * np.ones((n, 4))
+                plt.scatter(
+                    df["x"][i - 1],
+                    df[key],
+                    label=(
+                        key
+                        if args.sub_group_rename is None
+                        else args.sub_group_rename[i - 1]
+                    ),
+                    c=color[f],
+                    marker=markers[i - 1],
+                )
 
-        for target in args.plot_targets:
-            plt.axhline(y=targets[str(getattr(args, target))], linestyle="--")
+                plt.plot(
+                    df["x"][i - 1],
+                    df[key],
+                    color=color[f],
+                    marker=markers[i - 1],
+                    linestyle="-",
+                    linewidth=2,
+                )
+
+        for i, target in enumerate(args.plot_targets):
+            name = target
+            if args.plot_targets_rename is not None:
+                name = args.plot_targets_rename[i]
+            plt.axhline(
+                y=targets[str(getattr(args, target))], linestyle="--", label=name
+            )
 
         if args.indicate_best:
             plt.scatter(best_x, best_y, marker="*")
 
         plt.xlabel("Layer")
         plt.ylabel("Perplexity")
+        plt.gca().spines["right"].set_visible(False)
+        plt.gca().spines["top"].set_visible(False)
+        plt.gca().spines["left"].set_visible(False)
+        plt.gca().spines["bottom"].set_visible(False)
+        plt.tick_params(
+            left=False, bottom=False
+        )  # Show ticks on the left side (y-axis)
+        plt.grid(axis="y")
+
+        # Add legend
+        plt.legend(
+            loc="upper center",
+            bbox_to_anchor=(0.5, 1.1),
+            ncol=len(args.sub_group) + len(args.plot_targets),
+            frameon=False,
+        )
 
     if args.plot_type == "bar":
         assert len(vals) == 1, "Bar does not support multiple groups"
 
     if args.plot_type is not None:
-        assert args.plot_name is not None, "Plot name is not specified"
+        assert args.plot_save is not None, "Plot name is not specified"
 
-        plt.title(args.plot_name)
+        if args.plot_name is not None:
+            plt.title(args.plot_name)
         if args.plot_style is not None:
             sns.set_style(args.plot_style)
         if args.plot_save is not None:
@@ -166,9 +220,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "--sub-group", type=str, nargs="+", default=None
     )  # choose between this and run-names
+    parser.add_argument("--sub-group-rename", type=str, nargs="+", default=None)
     parser.add_argument("--run-names", type=str, nargs=-1, default=None)
-    parser.add_argument("--layer-lower", type=int, default=None)
-    parser.add_argument("--layer-upper", type=int, default=None)
+    parser.add_argument("--layer-lower", type=int, nargs="+", default=None)
+    parser.add_argument("--layer-upper", type=int, nargs="+", default=None)
 
     # Targets
     parser.add_argument("--baseline", type=str, default=None)
@@ -187,6 +242,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--plot-targets", type=str, nargs="+", choices=TARGET_CHOICES, default=None
     )
+    parser.add_argument("--plot-targets-rename", type=str, nargs="+", default=None)
     parser.add_argument("--indicate-best", action="store_true", default=False)
     parser.add_argument("--plot-name", type=str, default=None)
     parser.add_argument("--plot-save", type=str, default=None)
