@@ -46,7 +46,7 @@ class ColLLMReranker(BaseReranker):
         if self.similarity == "max":
             return torch.max(token_similarity, dim=-1).values
         elif self.similarity == "avg":
-            return torch.mean(token_similarity, dim=-1).values
+            return torch.mean(token_similarity, dim=-1)
         else:
             raise ValueError(f"Unknown Similarity Metric {self.similarity}")
 
@@ -62,12 +62,15 @@ class ColLLMReranker(BaseReranker):
     
     def _get_query_key_projections(self, query_embed: torch.Tensor, doc_embed: torch.Tensor, projections):
         model_name = self.model_attr.config.model_type
+        if "layer_norm" in projections.values():
+            query_embed = projections["layer_norm"](query_embed)
+            doc_embed = projections["layer_norm"](doc_embed)
         if model_name == "gpt2":
-            if len(projections) == 1:
+            if "query" not in projections.values():
                 c_attn = projections["key"]
                 query_proj, _, _ = c_attn(query_embed).split(self.model_attr.config.hidden_size, dim=2)
                 _, docs_proj, _ = c_attn(doc_embed).split(self.model_attr.config.hidden_size, dim=2)
-            elif len(projections) == 2:
+            else:
                 q_attn, c_attn = projections["query"], projections["key"]
                 query_proj = q_attn(query_embed)
                 docs_proj, _= c_attn(doc_embed).split(self.model_attr.config.hidden_size, dim=2)
@@ -105,7 +108,7 @@ class ColLLMReranker(BaseReranker):
         token_similarity = einsum("bhqe,dhke->bdhqk", norm_query_states, norm_key_states).squeeze(dim=0)
 
         token_score = self._apply_similarity(token_similarity)
-        score = token_score.sum(dim=(-1, -2))
+        score = token_score.sum(dim=(1, 2))
         return score
     
     def _get_layers(self):
@@ -131,6 +134,8 @@ class ColLLMReranker(BaseReranker):
                         res["key"] = layer
                     if "q_attn" in name:
                         res["query"] = layer
+                    if "ln_1" in name:
+                        req["layer_norm"] = layer
 
         for name, layer in module.named_modules():
             if isinstance(layer, layers) and ("k" in name or "q" in name):
@@ -138,6 +143,7 @@ class ColLLMReranker(BaseReranker):
                     res["key"] = layer
                 elif "q" in name:
                     res["query"] = layer
+                # Need to add layernorm
         return res
 
     def rerank(self, query_info: dict, k=1) -> None:
@@ -155,8 +161,7 @@ class ColLLMReranker(BaseReranker):
         ) for t in text]
 
         with torch.no_grad():
-            model_hidden_states = [self.model(
-                tokens["input_ids"].to(self.device),
+            model_hidden_states = [self.model( tokens["input_ids"].to(self.device),
                 attention_mask=tokens["attention_mask"].to(self.device),
                 output_hidden_states=True
             )["hidden_states"] for tokens in tokenized_text]
@@ -171,7 +176,7 @@ class ColLLMReranker(BaseReranker):
             if self.attention:
                 layers = self._get_layers()
                 all_sublayers = [self._find_sublayers(layer) for layer in layers]
-                sequential = [list(sublayer.keys()) for sublayer in all_sublayers]
+                #sequential = [list(sublayer.keys()) for sublayer in all_sublayers]
                 scores = []
                 for qd_states in model_hidden_states:
                     i = 0
