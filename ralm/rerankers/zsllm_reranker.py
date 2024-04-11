@@ -61,21 +61,41 @@ class ColLLMReranker(BaseReranker):
         return score
     
     def _get_query_key_projections(self, query_embed: torch.Tensor, doc_embed: torch.Tensor, projections):
+        # proj_arr = [name for name in sequential if str(i) == name.split("_")[-1]]
+        # curr_layer = [all_sublayers[i][name] for name in proj_arr]
         model_name = self.model_attr.config.model_type
-        if "layer_norm" in projections.values():
-            query_embed = projections["layer_norm"](query_embed)
-            doc_embed = projections["layer_norm"](doc_embed)
         if model_name == "gpt2":
-            if "query" not in projections.values():
-                c_attn = projections["key"]
-                query_proj, _, _ = c_attn(query_embed).split(self.model_attr.config.hidden_size, dim=2)
-                _, docs_proj, _ = c_attn(doc_embed).split(self.model_attr.config.hidden_size, dim=2)
-            else:
-                q_attn, c_attn = projections["query"], projections["key"]
-                query_proj = q_attn(query_embed)
-                docs_proj, _= c_attn(doc_embed).split(self.model_attr.config.hidden_size, dim=2)
+            for key, value in projections.items():
+                if "ln" in key:
+                    query_embed = projections[key](query_embed)
+                    doc_embed = projections[key](doc_embed)
+                if "query" in key:
+                    key_key = key.replace("query", "key")
+                    q_attn, c_attn = projections[key], projections[key_key]
+                    query_proj = q_attn(query_embed)
+                    docs_proj, _= c_attn(doc_embed).split(self.model_attr.config.hidden_size, dim=2)
+                if "key" in key:
+                    c_attn = projections[key]
+                    query_proj, _, _ = c_attn(query_embed).split(self.model_attr.config.hidden_size, dim=2)
+                    _, docs_proj, _ = c_attn(doc_embed).split(self.model_attr.config.hidden_size, dim=2)
+
+        # if model_name == "gpt2":
+        #     for key, value in projections.items():
+        #         if "query" not in projections.values():
+        #             c_attn = projections["key"]
+        #             query_proj, _, _ = c_attn(query_embed).split(self.model_attr.config.hidden_size, dim=2)
+        #             _, docs_proj, _ = c_attn(doc_embed).split(self.model_attr.config.hidden_size, dim=2)
+        #         else:
+        #             q_attn, c_attn = projections["query"], projections["key"]
+        #             query_proj = q_attn(query_embed)
+        #             docs_proj, _= c_attn(doc_embed).split(self.model_attr.config.hidden_size, dim=2)
         elif model_name in [*LLAMA_LIKE, *FALCON_TYPES, "opt", "bert"]:
-            query_projection, key_projection = projections["query"], projections["key"]
+            for key, query in projections.items():
+                if "query" in key:
+                    proj_q = projections[key]
+                if "key" in key:
+                    proj_k = projections[key]
+            query_projection, key_projection = proj_q, proj_k
             query_proj = query_projection(query_embed)
             docs_proj = key_projection(doc_embed)
         else:
@@ -125,25 +145,26 @@ class ColLLMReranker(BaseReranker):
         else:
             raise ValueError(MODEL_ERROR_MSG.format(self.model_attr.config.model_type))
 
-    def _find_sublayers(self, module: nn.Module, layers=(torch.nn.Linear, torch.nn.Conv1d, transformers.pytorch_utils.Conv1D)):
+    def _find_sublayers(self, module: nn.Module, i, layers=(torch.nn.Linear, torch.nn.Conv1d, transformers.pytorch_utils.Conv1D)):
         res = {}
         if self.model_attr.config.model_type == "gpt2":
             for name, layer in module.named_modules():
-                if isinstance(layer, layers) and ("c_attn" in name or "q_attn" in name):
+                if isinstance(layer, layers) and ("c_attn" in name or "q_attn" in name or "ln_1" in name):
                     if "c_attn" in name:
-                        res["key"] = layer
+                        res[name+"_key_"+str(i)] = layer
                     if "q_attn" in name:
-                        res["query"] = layer
+                        res[name+"_query_"+str(i)] = layer
                     if "ln_1" in name:
-                        req["layer_norm"] = layer
+                        res[name+"_ln_"+str(i)] = layer
 
-        for name, layer in module.named_modules():
-            if isinstance(layer, layers) and ("k" in name or "q" in name):
-                if "k" in name:
-                    res["key"] = layer
-                elif "q" in name:
-                    res["query"] = layer
-                # Need to add layernorm
+        else:
+            for name, layer in module.named_modules():
+                if isinstance(layer, layers) and ("k" in name or "q" in name):
+                    if "k" in name:
+                        res[name+"_key_"+str(i)] = layer
+                    elif "q" in name:
+                        res[name+"_query_"+str(i)] = layer
+                    # Need to add layernorm
         return res
 
     def rerank(self, query_info: dict, k=1) -> None:
@@ -175,15 +196,14 @@ class ColLLMReranker(BaseReranker):
             # Rerank on hidden states and sublayer weights
             if self.attention:
                 layers = self._get_layers()
-                all_sublayers = [self._find_sublayers(layer) for layer in layers]
-                #sequential = [list(sublayer.keys()) for sublayer in all_sublayers]
+                # list of dicts conatining the key = layer_name and value = corresponding layer
+                all_sublayers = [self._find_sublayers(layers[i], i) for i in range(len(layers))]
                 scores = []
                 for qd_states in model_hidden_states:
                     i = 0
                     score_vec = []
                     for layer_state in qd_states[self.min_layer:self.max_layer]:
-                        curr_layer = all_sublayers[i]
-                        score_vec.append(self._maxsim_attention(layer_state[0:1], layer_state[1:], curr_layer))
+                        score_vec.append(self._maxsim_attention(layer_state[0:1], layer_state[1:], all_sublayers[i]))
                         i += 1
                     scores.append(torch.stack(score_vec))
             
