@@ -70,18 +70,25 @@ class ColLLMReranker(BaseReranker):
                 if "ln" in key:
                     query_embed = projections[key](query_embed)
                     doc_embed = projections[key](doc_embed)
-            
+
+            k = False
+            q = False
             for key, _ in projections.items():
                 if "query" in key:
-                    key_key = key.replace("query", "key")
-                    q_attn, c_attn = projections[key], projections[key_key]
-                    query_proj = q_attn(query_embed)
-                    docs_proj, _= c_attn(doc_embed).split(self.model_attr.config.hidden_size, dim=2)
-                    break
+                    q = True
+                    q_key = key
                 if "key" in key:
-                    c_attn = projections[key]
-                    query_proj, _, _ = c_attn(query_embed).split(self.model_attr.config.hidden_size, dim=2)
-                    _, docs_proj, _ = c_attn(doc_embed).split(self.model_attr.config.hidden_size, dim=2)
+                    k = True
+                    k_key = key
+            
+            if q and k:
+                q_attn, c_attn = projections[q_key], projections[k_key]
+                query_proj = q_attn(query_embed)
+                docs_proj, _= c_attn(doc_embed).split(self.model_attr.config.hidden_size, dim=2)
+            else:
+                c_attn = projections[k_key]
+                query_proj, _, _ = c_attn(query_embed).split(self.model_attr.config.hidden_size, dim=2)
+                _, docs_proj, _ = c_attn(doc_embed).split(self.model_attr.config.hidden_size, dim=2)
 
         # if model_name == "gpt2":
         #     for key, value in projections.items():
