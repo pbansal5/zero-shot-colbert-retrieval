@@ -78,7 +78,6 @@ class ColLLMReranker(BaseReranker):
                     query_proj = q_attn(query_embed)
                     docs_proj, _= c_attn(doc_embed).split(self.model_attr.config.hidden_size, dim=2)
                     break
-            for key, _ in projections.items():
                 if "key" in key:
                     c_attn = projections[key]
                     query_proj, _, _ = c_attn(query_embed).split(self.model_attr.config.hidden_size, dim=2)
