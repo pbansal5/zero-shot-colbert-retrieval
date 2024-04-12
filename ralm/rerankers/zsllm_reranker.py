@@ -121,7 +121,7 @@ class ColLLMReranker(BaseReranker):
     def _maxsim_attention(self, query_embed: torch.Tensor, doc_embed: torch.Tensor, projections, attention_mask: torch.Tensor):
         query_proj, docs_proj = self._get_query_key_projections(query_embed, doc_embed, projections)
         query_proj = query_proj * attention_mask[0:1,:,:] # If projection has a bias we need to zero out padded tokens
-        docs_proj = doc_proj * attention_mask[1:,:,:]
+        docs_proj = docs_proj * attention_mask[1:,:,:]
 
         # Get number of attention_heads
         n_heads, n_key_heads = self.n_heads, self.n_key_heads
