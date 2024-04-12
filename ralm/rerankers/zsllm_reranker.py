@@ -74,6 +74,7 @@ class ColLLMReranker(BaseReranker):
                     q_attn, c_attn = projections[key], projections[key_key]
                     query_proj = q_attn(query_embed)
                     docs_proj, _= c_attn(doc_embed).split(self.model_attr.config.hidden_size, dim=2)
+                    break
                 if "key" in key:
                     c_attn = projections[key]
                     query_proj, _, _ = c_attn(query_embed).split(self.model_attr.config.hidden_size, dim=2)
@@ -113,8 +114,10 @@ class ColLLMReranker(BaseReranker):
             n_key_heads = n_heads
         return n_heads, n_key_heads
     
-    def _maxsim_attention(self, query_embed: torch.Tensor, doc_embed: torch.Tensor, projections):
+    def _maxsim_attention(self, query_embed: torch.Tensor, doc_embed: torch.Tensor, projections, attention_mask: torch.Tensor):
         query_proj, docs_proj = self._get_query_key_projections(query_embed, doc_embed, projections)
+        query_proj = query_proj * attention_mask[0:1,:,:] # If projection has a bias we need to zero out padded tokens
+        docs_proj = doc_proj * attention_mask[1:,:,:]
 
         # Get number of attention_heads
         n_heads, n_key_heads = self.n_heads, self.n_key_heads
@@ -199,11 +202,11 @@ class ColLLMReranker(BaseReranker):
                 # list of dicts conatining the key = layer_name and value = corresponding layer
                 all_sublayers = [self._find_sublayers(layers[i], i) for i in range(len(layers))]
                 scores = []
-                for qd_states in model_hidden_states:
+                for m, qd_states in enumerate(model_hidden_states):
                     i = 0
                     score_vec = []
                     for layer_state in qd_states[self.min_layer:self.max_layer]:
-                        score_vec.append(self._maxsim_attention(layer_state[0:1], layer_state[1:], all_sublayers[i]))
+                        score_vec.append(self._maxsim_attention(layer_state[0:1], layer_state[1:], all_sublayers[i]), tokenized_text[m]["attention_mask"][:,:,None].to(self.device))
                         i += 1
                     scores.append(torch.stack(score_vec))
             
