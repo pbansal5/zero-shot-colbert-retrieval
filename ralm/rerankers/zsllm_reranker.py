@@ -65,16 +65,20 @@ class ColLLMReranker(BaseReranker):
         # curr_layer = [all_sublayers[i][name] for name in proj_arr]
         model_name = self.model_attr.config.model_type
         if model_name == "gpt2":
-            for key, value in projections.items():
+            
+            for key, _ in projections.items():
                 if "ln" in key:
                     query_embed = projections[key](query_embed)
                     doc_embed = projections[key](doc_embed)
+            
+            for key, _ in projections.items():
                 if "query" in key:
                     key_key = key.replace("query", "key")
                     q_attn, c_attn = projections[key], projections[key_key]
                     query_proj = q_attn(query_embed)
                     docs_proj, _= c_attn(doc_embed).split(self.model_attr.config.hidden_size, dim=2)
                     break
+            for key, _ in projections.items():
                 if "key" in key:
                     c_attn = projections[key]
                     query_proj, _, _ = c_attn(query_embed).split(self.model_attr.config.hidden_size, dim=2)
@@ -91,7 +95,7 @@ class ColLLMReranker(BaseReranker):
         #             query_proj = q_attn(query_embed)
         #             docs_proj, _= c_attn(doc_embed).split(self.model_attr.config.hidden_size, dim=2)
         elif model_name in [*LLAMA_LIKE, *FALCON_TYPES, "opt", "bert"]:
-            for key, query in projections.items():
+            for key, _ in projections.items():
                 if "query" in key:
                     proj_q = projections[key]
                 if "key" in key:
