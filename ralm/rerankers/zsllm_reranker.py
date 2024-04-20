@@ -124,7 +124,13 @@ class ColLLMReranker(BaseReranker):
             n_key_heads = n_heads
         return n_heads, n_key_heads
     
-    def _maxsim_attention(self, query_embed: torch.Tensor, doc_embed: torch.Tensor, projections, attention_mask: torch.Tensor):
+    def _maxsim_attention(
+        self,
+        query_embed: torch.Tensor,
+        doc_embed: torch.Tensor,
+        projections,
+        attention_mask: torch.Tensor
+        ) -> torch.Tensor :
         query_proj, docs_proj = self._get_query_key_projections(query_embed, doc_embed, projections)
         query_proj = query_proj * attention_mask[0:1,:,:] # If projection has a bias we need to zero out padded tokens
         docs_proj = docs_proj * attention_mask[1:,:,:]
@@ -216,7 +222,8 @@ class ColLLMReranker(BaseReranker):
                     i = 0
                     score_vec = []
                     for layer_state in qd_states[self.min_layer:self.max_layer]:
-                        score_vec.append(self._maxsim_attention(layer_state[0:1], layer_state[1:], all_sublayers[i]), tokenized_text[m]["attention_mask"][:,:,None].to(self.device))
+                        mask = tokenized_text[m]["attention_mask"][:,:,None].to(self.device)
+                        score_vec.append(self._maxsim_attention(layer_state[0:1], layer_state[1:], all_sublayers[i], mask))
                         i += 1
                     scores.append(torch.stack(score_vec))
             

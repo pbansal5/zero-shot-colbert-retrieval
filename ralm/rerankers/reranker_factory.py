@@ -20,6 +20,8 @@ def get_reranker(reranker_type, args, tokenizer, model, device):
         from ralm.rerankers.zsllm_reranker import ColLLMReranker 
         if "gpt2" in args.model_name:
             tokenizer.pad_token = tokenizer.eos_token
+        if "llama" in args.model_name:
+            tokenizer.pad_token = tokenizer.eos_token
         return ColLLMReranker(
             tokenizer=tokenizer,
             model=model,

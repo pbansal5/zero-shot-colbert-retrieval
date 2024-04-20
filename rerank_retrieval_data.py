@@ -1,6 +1,7 @@
 import json
 import sys
 import argparse
+import logging
 
 from tqdm import tqdm
 
@@ -24,7 +25,7 @@ def main(args):
 
     with open(args.retrieved_file, "r") as f:
         retrieval_dataset = json.load(f)
-    print("Queries to process:", len(retrieval_dataset))
+    logging.info("Queries to process:", len(retrieval_dataset))
 
     model, tokenizer, config, device = load_model_and_tokenizer(
         args.model_name,
@@ -34,22 +35,22 @@ def main(args):
         model_type = args.model_type
     )
 
-    print(f"Creating reranker of type {args.reranking_type}...")
+    logging.info(f"Creating reranker of type {args.reranking_type}...")
     reranker = get_reranker(args.reranking_type, args, tokenizer, model, device)
 
 
-    print("Reranking Documents...")
+    logging.info("Reranking Documents...")
     for query_index in tqdm(range(1,len(retrieval_dataset),args.batch_size)):
         query_info = retrieval_dataset[query_index:query_index+args.batch_size]
         reranker.rerank(query_info, k=args.num_docs_to_rank)
 
-    print(f"Finished processing {len(retrieval_dataset)} queries")
-    print(f"Writing to {args.output_file}")
+    logging.info(f"Finished processing {len(retrieval_dataset)} queries")
+    logging.info(f"Writing to {args.output_file}")
     with open(args.output_file, "w") as f:
         f.write(json.dumps(retrieval_dataset, indent=4))
         f.write("\n")
 
-    print("Done!")
+    logging.info("Done!")
 
 
 if __name__ == '__main__':
