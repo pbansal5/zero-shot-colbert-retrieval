@@ -11,12 +11,11 @@ class ContrieverReranker(BaseReranker):
         super(ContrieverReranker, self).__init__(tokenizer=tokenizer, model=model, device=device)
         self.max_length = max_length
 
-
+    @staticmethod
     def _mean_pooling(token_embeddings: List[torch.Tensor], mask: List[torch.Tensor]) -> List[int]:
         token_embeddings = token_embeddings.masked_fill(~mask[..., None].bool(), 0.)
         document_embeddings = token_embeddings.sum(dim=1) / mask.sum(dim=1)[..., None]
         return document_embeddings 
-
 
     def rerank(self, query_info: dict, k:int=1) -> None:
         query = [q["query"] for q in query_info]

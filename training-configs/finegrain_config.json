@@ -6,7 +6,7 @@
         "cycle_momentum": false
     },
     "epochs": 5,
-    "batch_size": 32,
+    "batch_size": 4,
     "loss": "finegrain",
     "save_embedding_rate": 5,
     "optimizer": "AdamW",

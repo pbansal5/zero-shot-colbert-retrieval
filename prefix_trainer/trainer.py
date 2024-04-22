@@ -4,6 +4,7 @@ from itertools import chain
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
+from tqdm import tqdm
 from einops import repeat, pack, unpack, rearrange 
 
 from .config import TrainingConfig
@@ -66,29 +67,30 @@ class DefaultTrainer:
         self.get_scheduler(training_config)
 
         for epoch in range(training_config.epochs):
-            logging.info(f"Begging Epoch {epoch}")
-            loss_all = []
-            for query, documents, best_doc in train_dataloader:
-                self.optimizer.zero_grad()
-                query, documents, labels = self.process_tokens(query, documents, best_doc, device)
-                query_embeddings = self.get_model_embeddings(query, training_config, device)
-                document_embeddings = self.get_model_embeddings(documents, training_config, device)
+            with tqdm(train_dataloader, unit="batch") as tepoch:
+                for query, documents, best_doc in tepoch:
+                    tepoch.set_description(f"Epoch {epoch}")
 
-                # Apply Attention masks
-                query_embeddings = query_embeddings * query["attention_mask"]
-                document_embeddings = document_embeddings * documents["attention_mask"]
+                    self.optimizer.zero_grad()
+                    query, documents, labels = self.process_tokens(query, documents, best_doc, device)
+                    query_embeddings = self.get_model_embeddings(query, training_config, device)
+                    document_embeddings = self.get_model_embeddings(documents, training_config, device)
 
-                # Unpack prefix embeddings and reshape for criterion
-                _, final_query_embeddings = unpack(query_embeddings, [[self.num_of_tokens][query_embeddings.shape[1] - self.num_of_tokens]], "b * d")
-                _, final_document_embeddings = unpack(document_embeddings, [[self.num_of_tokens][document_embeddings.shape[1] - self.num_of_tokens]], "b * d")
-                final_document_embeddings = rearrange(final_document_embeddings, "(d b) s l -> b d s l", d=training_config.batch_size)
-                final_query_embeddings = repeat(final_query_embeddings, "b s l -> b q s l", q=1)
+                    # Apply Attention masks
+                    query_embeddings = query_embeddings * query["attention_mask"][:,:,None].to(device)
+                    document_embeddings = document_embeddings * documents["attention_mask"][:,:,None].to(device)
 
-                # Loss should be pased in the shape of batch (documents/queries) sequence_length embedding_dimension
-                loss = self.criterion(final_query_embeddings, final_document_embeddings, labels)
-                loss_all.append(loss.item())
-                self.update_tokens(loss)
-            self.scheduler.step()
+                    # Unpack prefix embeddings and reshape for criterion
+                    _, final_query_embeddings = unpack(query_embeddings, [[self.num_of_tokens],[query_embeddings.shape[1] - self.num_of_tokens]], "b * d")
+                    _, final_document_embeddings = unpack(document_embeddings, [[self.num_of_tokens],[document_embeddings.shape[1] - self.num_of_tokens]], "b * d")
+                    final_document_embeddings = rearrange(final_document_embeddings, "(d b) s l -> b d s l", b=training_config.batch_size)
+                    final_query_embeddings = repeat(final_query_embeddings, "b s l -> b q s l", q=1)
+
+                    # Loss should be pased in the shape of batch (documents/queries) sequence_length embedding_dimension
+                    loss = self.criterion(final_query_embeddings, final_document_embeddings, labels)
+                    self.update_tokens(loss)
+                    tepoch.set_postfix(loss=loss.item())
+                self.scheduler.step()
 
             if eval_dataloader is not None:
                 with torch.no_grad():
@@ -153,7 +155,7 @@ class EmbeddingTrainer(DefaultTrainer):
         labels = torch.zeros((len(documents), len(documents[0])), requires_grad=False)
         for i, best in enumerate(best_doc):
             labels[best, i] = 1
-        labels = rearrange(labels, "d b -> b d")
+        labels = rearrange(labels, "d b -> b d").to(device)
 
         # Flatten Documents
         documents = list(chain.from_iterable(documents))

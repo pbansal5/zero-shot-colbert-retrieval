@@ -25,7 +25,7 @@ def main(args):
 
     with open(args.retrieved_file, "r") as f:
         retrieval_dataset = json.load(f)
-    logging.info("Queries to process:", len(retrieval_dataset))
+    logging.info(f"Queries to process: {len(retrieval_dataset)}")
 
     model, tokenizer, config, device = load_model_and_tokenizer(
         args.model_name,
