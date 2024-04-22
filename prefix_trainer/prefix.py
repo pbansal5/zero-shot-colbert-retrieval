@@ -3,6 +3,7 @@ import torch.nn as nn
 
 class PrefixEmbeddingParameters(nn.Module):
     def __init__(self, num_tokens, embedding_dimension, split_tower_tokens):
+        super().__init__()
         self.prefix1 = nn.Parameter(torch.rand(num_tokens, embedding_dimension))
         self.prefix2 = None
         if split_tower_tokens:

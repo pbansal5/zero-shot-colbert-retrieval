@@ -27,10 +27,10 @@ python prepare_retrieval_data.py \
     --max_length 1024 \
     --dataset_path wikitext \
     --dataset_name wikitext-103-v1 \
-    --dataset_split test \
+    --dataset_split validation \
     --index_name wikipedia-dpr \
     --forbidden_titles_path ralm/retrievers/wikitext103_forbidden_titles.txt \
     --stride 4 \
-    --output_file logs/bm25_retrieval_100 \
+    --output_file logs/bm25_retrieval_validation \
     --num_tokens_for_query 32 \
-    --num_docs 100 
+    --num_docs 16 

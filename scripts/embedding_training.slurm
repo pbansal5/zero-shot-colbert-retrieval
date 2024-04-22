@@ -21,15 +21,15 @@ source $WORK/miniconda3/bin/activate inralm
 
 # Launch Job
 cd $WORK/projects/in-context-ralm
-python rerank_retrieval_data.py \
-    --reranking_type zs-llms \
-    --min_layer 0 \
-    --max_layer 32 \
-    --similarity max \
-    --model_name meta-llama/Llama-2-7b-chat-hf \
+python train_prefix.py \
+    --model_name gpt2 \
     --model_type causal \
-    --batch_size 1 \
-    --output_file logs/bm25_retrieval_llama_zsllms_max_rerank \
-    --retrieved_file logs/bm25_retrieval \
+    --output_file runs/embeddings \
+    --retrieved_file logs/bm25_retrieval_validation \
+    --score_file benchmark/bm25_validation_oracle/ppls.pkl \
+    --training_config training-configs/finegrain_config.json \
     --max_length 256 \
-    --num_docs_to_rank 16 
+    --embedding \
+    --num_tokens 16 \
+    --split_tower
+

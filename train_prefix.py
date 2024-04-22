@@ -6,6 +6,7 @@ import logging
 from ralm.file_utils import print_args
 from ralm.model_utils import load_model_and_tokenizer
 from prefix_trainer.trainer import EmbeddingTrainer
+from prefix_trainer.config import TrainingConfig
 from prefix_trainer.datasets import PerplexityDataset
 
 def main(args):
@@ -21,11 +22,18 @@ def main(args):
                 objects.append(pickle.load(f))
             except EOFError:
                 break
-    assert len(objects) == 3, "Something is not right"
-    best_doc_id = objects[-1]
+    objects = objects[0]
+    assert len(objects) == 3, f"Something is not right, got objects with len({len(objects)})"
+    best_doc_id = objects[-1][1:]
+    retrieval_dataset = retrieval_dataset[1:]
+    assert len(retrieval_dataset) ==  len(best_doc_id), f"The number of labels doesn't equal the number of queries {len(retrieval_dataset)} queries and {len(best_doc_id)} labels"
     with open(args.training_config, "r") as f:
         training_config = json.load(f)
 
+    logging.info("Configuring Training Config...")
+    training_config = TrainingConfig(**training_config)
+
+    logging.info("Creating Dataset Object...")
     train_dataset = PerplexityDataset(retrieval_info=retrieval_dataset, best_doc=best_doc_id)
 
     model, tokenizer, config, device = load_model_and_tokenizer(
@@ -70,10 +78,10 @@ if __name__ == '__main__':
     parser.add_argument("--retrieved_file", type=str, required=True)
     parser.add_argument("--score_file", type=str, required=True)
     parser.add_argument("--training_config", type=str, required=True)
-    parser.add_argument("--embedding", action="store_true", defualt=False)
+    parser.add_argument("--embedding", action="store_true", default=False)
     parser.add_argument("--num_tokens", type=int, default=12)
     parser.add_argument("--max_length", type=int, default=256)
-    parser.add_argument("--split_tower", action="store_true", defualt=False)
+    parser.add_argument("--split_tower", action="store_true", default=False)
 
     args = parser.parse_args()
     main(args)

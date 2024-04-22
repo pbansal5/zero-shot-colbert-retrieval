@@ -25,10 +25,10 @@ python eval_lm.py \
     --model_name gpt2 \
     --dataset_path wikitext \
     --dataset_name wikitext-103-v1 \
-    --dataset_split test \
+    --dataset_split validation \
     --stride 4 \
     --max_length 1024 \
-    --output_dir benchmark/bm25_oracle \
-    --retrieved_file logs/bm25_retrieval \
+    --output_dir benchmark/bm25_validation_oracle \
+    --retrieved_file logs/bm25_retrieval_validation \
     --ranking_strategy oracle \
     --num_docs_to_rank 16

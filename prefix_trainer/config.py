@@ -7,7 +7,7 @@ class TrainingConfig:
     epochs: int
     batch_size: int
     loss: str
-    save_model_rate: int
+    save_embedding_rate: int
     optimizer: str
     optimizer_params: dict
     layer: int
