@@ -40,8 +40,9 @@ def main(args):
 
 
     logging.info("Reranking Documents...")
-    for query_index in tqdm(range(1,len(retrieval_dataset),args.batch_size)):
-        query_info = retrieval_dataset[query_index:query_index+args.batch_size]
+    final_document = len(retrieval_dataset) if args.num_queries_to_test is None else args.num_queries_to_test
+    for query_index in tqdm(range(1, final_document, args.batch_size)):
+        query_info = retrieval_dataset[query_index:min(query_index+args.batch_size, final_document)]
         reranker.rerank(query_info, k=args.num_docs_to_rank)
 
     logging.info(f"Finished processing {len(retrieval_dataset)} queries")
@@ -76,6 +77,9 @@ if __name__ == '__main__':
     parser.add_argument("--batch_size", type=int, default=1)
     parser.add_argument("--reranking_type", type=str, required=True, choices=RERANKING_TYPES, default="colbert")
     add_reranker_args(parser, retrieval_type)
+
+    # Testing params
+    parser.add_argument("--num_queries_to_test", default=None, type=int)
 
     args = parser.parse_args()
     main(args)

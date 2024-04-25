@@ -17,19 +17,19 @@
 
 
 # Source conda environment
-source $WORK/miniconda3/bin/activate inralm 
+#source $WORK/miniconda3/bin/activate inralm 
 
 # Launch Job
-cd $WORK/projects/in-context-ralm
+#cd $WORK/projects/in-context-ralm
 python rerank_retrieval_data.py \
     --reranking_type zs-llms \
     --min_layer 0 \
-    --max_layer 32 \
+    --max_layer 12 \
     --similarity max \
-    --model_name meta-llama/Llama-2-7b-chat-hf \
+    --model_name gpt2 \
     --model_type causal \
     --batch_size 1 \
-    --output_file logs/bm25_retrieval_llama_zsllms_max_rerank \
+    --output_file logs/testing_stuff \
     --retrieved_file logs/bm25_retrieval \
     --max_length 256 \
     --num_docs_to_rank 16 

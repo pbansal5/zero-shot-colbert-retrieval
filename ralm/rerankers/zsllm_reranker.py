@@ -47,10 +47,13 @@ class ColLLMReranker(BaseReranker):
             return torch.max(token_similarity, dim=-1).values
         elif self.similarity == "avg":
             return torch.mean(token_similarity, dim=-1)
+        elif self.similarity == "topk-avg":
+            return torch.mean(torch.topk(token_similarity, 2).values, dim=-1)
         else:
             raise ValueError(f"Unknown Similarity Metric {self.similarity}")
 
     def _maxsim(self, query_embed: torch.Tensor, docs_embed: torch.Tensor):
+        import pdb; pdb.set_trace()
         query_embed_normalized = query_embed / torch.norm(query_embed, dim=-1, keepdim=True).clamp(min=1e-5)
         docs_embed_normalized = docs_embed / torch.norm(docs_embed, dim=-1, keepdim=True).clamp(min=1e-5)
 

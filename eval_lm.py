@@ -118,7 +118,8 @@ def eval_dataset(
         ranking_strategy="first",
         layer=-1,
         num_docs_to_rank=1,
-        num_tokens_to_rank_logprob=16
+        num_tokens_to_rank_logprob=16,
+        num_queries_to_test=None
 ):
     encodings = tokenizer(dataset, add_special_tokens=False, return_tensors="pt")
 
@@ -144,7 +145,7 @@ def eval_dataset(
     all_tokens_to_predict = []
     all_chosen_doc_ids = [None]
     num_inputs_no_retrieval = 0
-    for begin_loc in tqdm(range(0, dataset_len, stride)):
+    for begin_loc in tqdm(range(0, dataset_len, stride)[:num_queries_to_test]):
         end_loc = min(begin_loc + max_length, dataset_len)
         trg_len = end_loc - prev_end_loc  # may be different from stride on last loop
         if idx > 0 and retrieval_dataset is not None and len(retrieval_dataset[idx]["retrieved_docs"]) > 0:
@@ -196,7 +197,8 @@ def eval_dataset(
         if end_loc == dataset_len:
             break
 
-    assert retrieval_dataset is None or len(retrieval_dataset) == idx
+    if num_queries_to_test is None:
+        assert retrieval_dataset is None or len(retrieval_dataset) == idx
 
     ppl = torch.exp(torch.stack(nlls).sum() / counter).item()
     print("Perplexity:", ppl)
@@ -259,6 +261,7 @@ def main(args):
         layer=args.layer,
         num_docs_to_rank=args.num_docs_to_rank,
         num_tokens_to_rank_logprob=args.ranking_logprob_past_tokens,
+        num_queries_to_test=args.num_queries_to_test
     )
 
 
@@ -289,6 +292,9 @@ if __name__ == '__main__':
     parser.add_argument("--layer", type=int, default=-1)
     parser.add_argument("--num_docs_to_rank", type=int, default=-1)
     parser.add_argument("--ranking_logprob_past_tokens", type=int, default=16)
+
+    # testing params
+    parser.add_argument("--num_queries_to_test", default=None, type=int)
 
     args = parser.parse_args()
 

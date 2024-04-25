@@ -5,8 +5,8 @@
 #----------------------------------------------------
 
 #SBATCH -J CBRALM                         # Job name
-#SBATCH -o slurmlogs/ZS-RERANK.o%j        # Name of stdout output file (%j corresponds to the job id)
-#SBATCH -e slurmlogs/ZS-RERANK.e%j        # Name of stderr error file (%j corresponds to the job id)
+#SBATCH -o slurmlogs/BM-RALM.o%j          # Name of stdout output file (%j corresponds to the job id)
+#SBATCH -e slurmlogs/BM-RALM.e%j          # Name of stderr error file (%j corresponds to the job id)
 #SBATCH -p gpu-a100-small                 # Queue (partition) name
 #SBATCH -N 1                              # Total # of nodes (must be 1 for serial)
 #SBATCH -n 1                              # Total # of mpi tasks (should be 1 for serial)
@@ -20,17 +20,23 @@
 #source $WORK/miniconda3/bin/activate inralm 
 
 # Launch Job
-#cd $WORK/projects/in-context-ralm
-python rerank_retrieval_data.py \
-    --reranking_type zs-llms \
-    --min_layer 0 \
-    --max_layer 12 \
-    --similarity max \
-    --model_name gpt2 \
-    --model_type causal \
-    --batch_size 1 \
-    --output_file logs/testing_shit_remove_me \
-    --retrieved_file logs/bm25_retrieval \
-    --max_length 256 \
+########cd $WORK/projects/in-context-ralm
+
+export MODEL_NAME='gpt2'
+export RERANKED_FILE='testing_shit_topk_avg'
+export RUN_NAME='testing_shit_maxsim_topk_avg'
+export LAYER=9
+
+python eval_lm.py \
+    --model_name $MODEL_NAME \
+    --dataset_path wikitext \
+    --dataset_name wikitext-103-v1 \
+    --dataset_split test \
+    --output_dir "benchmark/${RUN_NAME}_layer_$LAYER" \
+    --stride 4 \
+    --max_length 1024 \
+    --retrieved_file "logs/${RERANKED_FILE}" \
+    --ranking_strategy 'first-rerank' \
+    --layer $LAYER \
     --num_docs_to_rank 16 \
-    --num_queries_to_test 1000 
+    --num_queries_to_test 1000
