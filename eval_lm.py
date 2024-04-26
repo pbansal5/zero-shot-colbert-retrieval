@@ -135,6 +135,9 @@ def eval_dataset(
     else:
         raise ValueError(f"Unknown normalization_level: '{normalization_level}'")
 
+    if (num_queries_to_test is not None):
+        counter = list(range(0, dataset_len, stride))[:num_queries_to_test][-1]
+        
     print("Normalization factor (num tokens/words..):", counter)
 
     nlls = []
